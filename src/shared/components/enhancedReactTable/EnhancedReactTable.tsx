@@ -9,6 +9,7 @@ import {
 import {
     IColumnFormatterData, IColumnSortFunction, IColumnFilterFunction, IColumnVisibilityFunction, ColumnVisibility
 } from "./IColumnFormatter";
+import './styles.css';
 
 type IColumnSort = {
     column: string,
@@ -99,7 +100,9 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
 
         this.state = {
             columnVisibility: EnhancedReactTable.resolveVisibility(props.columns, props.rawData),
-            filter: ""
+            filter: "",
+            itemsPerPage: this.props.initItemsPerPage || 25,
+            currentPage: this.props.initPage || 0
         };
 
         this.colNameToId = this.mapColNameToId(props.columns);
@@ -108,6 +111,28 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
         // binding "this" to handler functions
         this.handleFilterInput = this.handleFilterInput.bind(this);
         this.handleVisibilityToggle = this.handleVisibilityToggle.bind(this);
+        this.onChangeItemsPerPage = this.onChangeItemsPerPage.bind(this);
+        this.onPreviousPageClick = this.onPreviousPageClick.bind(this);
+        this.onNextPageClick = this.onNextPageClick.bind(this);
+    }
+
+    onChangeItemsPerPage(itemsPerPage:number) {
+        const nextState = Object.assign({}, this.state);
+        nextState.itemsPerPage = itemsPerPage;
+        nextState.currentPage = Math.min(this.state.currentPage, this.numPages(nextState.itemsPerPage)-1);
+        this.setState(nextState);
+    }
+
+    onPreviousPageClick() {
+        const nextState = Object.assign({}, this.state);
+        nextState.currentPage = Math.max(0, this.state.currentPage - 1);
+        this.setState(nextState);
+    }
+
+    onNextPageClick() {
+        const nextState = Object.assign({}, this.state);
+        nextState.currentPage = Math.min(this.state.currentPage + 1, this.numPages() - 1);
+        this.setState(nextState);
     }
 
     public render() {
@@ -139,6 +164,9 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
         // table rows: an array of Tr components
         const rows = this.generateRows(sortedCols, rawData);
 
+        const firstItemShownIndex = (this.state.itemsPerPage === -1 ? 0 : this.state.itemsPerPage*this.state.currentPage) + 1;
+        const lastItemShownIndex = (this.state.itemsPerPage === -1 ? rawData.length : Math.min(rawData.length, firstItemShownIndex + this.state.itemsPerPage - 1));
+
         return(
             <div>
                 <TableHeaderControls
@@ -148,12 +176,24 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
                     handleInput={this.handleFilterInput}
                     onColumnToggled={this.handleVisibilityToggle}
                     showSearch={true}
+                    className="pull-right"
+                    paginationProps={{itemsPerPage:this.state.itemsPerPage,
+                                        currentPage: this.state.currentPage,
+                                        onChangeItemsPerPage: this.onChangeItemsPerPage,
+                                        onPreviousPageClick: this.onPreviousPageClick,
+                                        onNextPageClick: this.onNextPageClick,
+                                        textBetweenButtons: firstItemShownIndex+"-"+lastItemShownIndex+" of "+rawData.length,
+                                        itemsName: this.props.itemsName,
+                                        previousPageDisabled: (this.state.currentPage === 0),
+                                        nextPageDisabled: (this.state.currentPage === this.numPages()-1)}}
                     {...headerControlsProps}
                 />
                 <Table
                     sortable={sortable}
                     filterable={filterable}
                     filterBy={this.state.filter}
+                    itemsPerPage={this.state.itemsPerPage === -1 ? undefined : this.state.itemsPerPage}
+                    currentPage={this.state.currentPage}
                     {...reactTableProps}
                 >
                     <Thead>
@@ -163,6 +203,15 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
                 </Table>
             </div>
         );
+    }
+
+    private numPages(itemsPerPage?:number) {
+        itemsPerPage = itemsPerPage || this.state.itemsPerPage;
+        if (itemsPerPage === -1) {
+            return 1;
+        } else {
+            return Math.ceil(this.props.rawData.length / itemsPerPage);
+        }
     }
 
     private mapColNameToId(columns:IColumnDefMap|undefined):{[key:string]: string}
