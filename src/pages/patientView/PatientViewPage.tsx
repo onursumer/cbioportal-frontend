@@ -39,6 +39,11 @@ interface IPatientViewState {
     cnaSegmentData: any;
     mutationData: any;
     activeTabKey: Number;
+    sampleOrder?:string[];
+    sampleColors?:{ [s:string]: string};
+    sampleLabels?:{ [s:string]: string};
+    sampleTumorType?:{ [s:string]: string};
+    sampleCancerType?:{ [s:string]: string};
 
 }
 
@@ -127,7 +132,13 @@ export default class PatientViewPage extends React.Component<IPatientViewPagePro
                 });
 
                 this.fetchMutationData(sampleIds).then((_result) => {
-                    this.setState(({ 'mutationData' : _result } as IPatientViewState));
+                    /* TODO: set these params better */
+                    const sampleOrder = Object.keys(_result.map((x:any)=>x.sampleId).reduce((map:any, next:string) => {map[next] = true; return map;}, {}));
+                    const sampleColors = sampleOrder.reduce((map:any, next:string) => {map[next] = "black"; return map;}, {});
+                    const sampleLabels = sampleOrder.reduce((map:any, next:string, index:number) => {map[next] = index+''; return map;}, {});
+                    const sampleTumorType = sampleOrder.reduce((map:any, next:string) => {map[next] = "TUMOR_TYPE"; return map;}, {});
+                    const sampleCancerType = sampleOrder.reduce((map:any, next:string) => {map[next] = "CANCER_TYPE"; return map;}, {});
+                    this.setState(({ 'mutationData' : _result, sampleOrder, sampleColors, sampleLabels, sampleTumorType, sampleCancerType } as IPatientViewState));
                 });
 
             }
@@ -173,9 +184,9 @@ export default class PatientViewPage extends React.Component<IPatientViewPagePro
                             renderIf(this.state.mutationData && this.state.cnaSegmentData)(
                                 <GenomicOverview mutations={this.state.mutationData}
                                                  cnaSegments={this.state.cnaSegmentData}
-                                                 sampleOrder={mockData.order}
-                                                 sampleLabels={mockData.labels}
-                                                 sampleColors={mockData.colors}
+                                                 sampleOrder={(this.state.sampleOrder || []).reduce((map:any, next:string, index:number) => {map[next] = index; return map;},{})}
+                                                 sampleLabels={this.state.sampleLabels || {}}
+                                                 sampleColors={this.state.sampleColors || {}}
                                 />
                             )
                         }
@@ -185,11 +196,11 @@ export default class PatientViewPage extends React.Component<IPatientViewPagePro
                             renderIf(this.state.mutationData)(
                                 < MutationInformationContainer
                                     mutations={this.state.mutationData}
-                                    sampleOrder={mockData.order}
-                                    sampleLabels={mockData.labels}
-                                    sampleColors={mockData.colors}
-                                    sampleTumorType={mockData.tumorType}
-                                    sampleCancerType={mockData.cancerType}
+                                    sampleOrder={this.state.sampleOrder || []}
+                                    sampleLabels={this.state.sampleLabels || {}}
+                                    sampleColors={this.state.sampleColors || {}}
+                                    sampleTumorType={this.state.sampleTumorType || {}}
+                                    sampleCancerType={this.state.sampleCancerType || {}}
                                 />
                             )
                         }

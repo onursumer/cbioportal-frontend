@@ -24,7 +24,7 @@ export default class AlleleFreqColumnFormatter {
             const barY = AlleleFreqColumnFormatter.maxBarHeight - barHeight;
 
 
-            const bar = (<rect x={barX[mutation.sampleId]} y={barY} width={AlleleFreqColumnFormatter.barWidth} height={barHeight} fill={columnProps.sampleColors[mutation.sampleId]}/>);
+            const bar = (<rect key={mutation.sampleId} x={barX[mutation.sampleId]} y={barY} width={AlleleFreqColumnFormatter.barWidth} height={barHeight} fill={columnProps.sampleColors[mutation.sampleId]}/>);
 
             const circleRadius = 6;
             const sampleId = mutation.sampleId;
@@ -67,6 +67,8 @@ export default class AlleleFreqColumnFormatter {
         </Td>);
     }
     public static sortFunction(a:number[], b:number[]):number {
-        return compareNumberLists(a, b);
+        const result = compareNumberLists(a,b);
+        // Desired: -1 if a <=b, otherwise 1
+        return (result <= 0 ? -1 : 1);
     }
 }
