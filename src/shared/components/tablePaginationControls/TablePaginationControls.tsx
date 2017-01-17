@@ -13,7 +13,6 @@ export type ITablePaginationControlsProps = {
     onChangeItemsPerPage?:(itemsPerPage:number)=>any;
     onPreviousPageClick?:()=>any;
     onNextPageClick?:()=>any;
-    itemsName?:string;
     className?:string;
     previousPageDisabled?:boolean;
     nextPageDisabled?:boolean;
@@ -29,7 +28,6 @@ export class TablePaginationControls extends React.Component<ITablePaginationCon
         onChangeItemsPerPage: ()=>0,
         onPreviousPageClick: ()=>0,
         onNextPageClick: ()=>0,
-        itemsName: "items",
         className: "",
         previousPageDisabled:false,
         nextPageDisabled:false
@@ -57,7 +55,7 @@ export class TablePaginationControls extends React.Component<ITablePaginationCon
             </ButtonGroup>
 
             <ButtonGroup bsSize="sm">
-            <select value={this.props.itemsPerPage+""} onChange={this.handleChangeItemsPerPage}>
+            <select className="bootstrap-mimic-select" value={this.props.itemsPerPage+""} onChange={this.handleChangeItemsPerPage}>
                 {pageSizeOptionElts}
             </select>
         </ButtonGroup>

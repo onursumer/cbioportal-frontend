@@ -94,6 +94,10 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
     // sorted list of columns (by priority)
     private sortedColumns:Array<IEnhancedReactTableColumnDef>;
 
+    private filteredDataLength:number;
+
+    private shouldSetState:boolean;
+
     constructor(props:IEnhancedReactTableProps<T>)
     {
         super(props);
@@ -105,34 +109,38 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
             currentPage: this.props.initPage || 0
         };
 
+        // Begin code designed to get around the fact that data filtering happens inside Table
+        // but we need that information to properly paginate.
+
+        // Monkey patch to get access to filtered data for pagination num pages calculation
+        this.filteredDataLength = props.rawData.length;
+        this.shouldSetState = false;
+
+        const setFilteredDataLength = (n:number) => {
+            if (n !== this.filteredDataLength) {
+                this.filteredDataLength = n;
+                this.shouldSetState = true;
+            }
+        };
+
+        const Table_applyFilter = Table.prototype.applyFilter;
+        Table.prototype.applyFilter = function(){
+            const result = Table_applyFilter.apply(this, arguments);
+            setFilteredDataLength(result.length);
+            return result;
+        };
+        //
+
+
         this.colNameToId = this.mapColNameToId(props.columns);
         this.sortedColumns = this.resolveOrder(props.columns);
 
         // binding "this" to handler functions
         this.handleFilterInput = this.handleFilterInput.bind(this);
         this.handleVisibilityToggle = this.handleVisibilityToggle.bind(this);
-        this.onChangeItemsPerPage = this.onChangeItemsPerPage.bind(this);
-        this.onPreviousPageClick = this.onPreviousPageClick.bind(this);
-        this.onNextPageClick = this.onNextPageClick.bind(this);
-    }
-
-    onChangeItemsPerPage(itemsPerPage:number) {
-        const nextState = Object.assign({}, this.state);
-        nextState.itemsPerPage = itemsPerPage;
-        nextState.currentPage = Math.min(this.state.currentPage, this.numPages(nextState.itemsPerPage)-1);
-        this.setState(nextState);
-    }
-
-    onPreviousPageClick() {
-        const nextState = Object.assign({}, this.state);
-        nextState.currentPage = Math.max(0, this.state.currentPage - 1);
-        this.setState(nextState);
-    }
-
-    onNextPageClick() {
-        const nextState = Object.assign({}, this.state);
-        nextState.currentPage = Math.min(this.state.currentPage + 1, this.numPages() - 1);
-        this.setState(nextState);
+        this.handleChangeItemsPerPage = this.handleChangeItemsPerPage.bind(this);
+        this.handlePreviousPageClick = this.handlePreviousPageClick.bind(this);
+        this.handleNextPageClick = this.handleNextPageClick.bind(this);
     }
 
     public render() {
@@ -164,8 +172,13 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
         // table rows: an array of Tr components
         const rows = this.generateRows(sortedCols, rawData);
 
-        const firstItemShownIndex = (this.state.itemsPerPage === -1 ? 0 : this.state.itemsPerPage*this.state.currentPage) + 1;
-        const lastItemShownIndex = (this.state.itemsPerPage === -1 ? rawData.length : Math.min(rawData.length, firstItemShownIndex + this.state.itemsPerPage - 1));
+        let firstItemShownIndex:number;
+        if (this.filteredDataLength === 0) {
+            firstItemShownIndex = 0;
+        } else {
+            firstItemShownIndex = (this.state.itemsPerPage === -1 ? 0 : this.state.itemsPerPage*this.state.currentPage) + 1;
+        }
+        const lastItemShownIndex:number = (this.state.itemsPerPage === -1 ? this.filteredDataLength : Math.min(this.filteredDataLength, firstItemShownIndex + this.state.itemsPerPage - 1));
 
         return(
             <div>
@@ -179,13 +192,12 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
                     className="pull-right"
                     paginationProps={{itemsPerPage:this.state.itemsPerPage,
                                         currentPage: this.state.currentPage,
-                                        onChangeItemsPerPage: this.onChangeItemsPerPage,
-                                        onPreviousPageClick: this.onPreviousPageClick,
-                                        onNextPageClick: this.onNextPageClick,
-                                        textBetweenButtons: firstItemShownIndex+"-"+lastItemShownIndex+" of "+rawData.length,
-                                        itemsName: this.props.itemsName,
+                                        onChangeItemsPerPage: this.handleChangeItemsPerPage,
+                                        onPreviousPageClick: this.handlePreviousPageClick,
+                                        onNextPageClick: this.handleNextPageClick,
+                                        textBetweenButtons: `${firstItemShownIndex}-${lastItemShownIndex} of ${this.filteredDataLength}`,
                                         previousPageDisabled: (this.state.currentPage === 0),
-                                        nextPageDisabled: (this.state.currentPage === this.numPages()-1)}}
+                                        nextPageDisabled: (this.state.currentPage >= this.numPages()-1)}}
                     {...headerControlsProps}
                 />
                 <Table
@@ -205,12 +217,26 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
         );
     }
 
+    componentWillUpdate(nextProps:IEnhancedReactTableProps<T>, nextState:IEnhancedReactTableState) {
+        if (nextState.filter.length === 0) {
+            this.filteredDataLength = this.props.rawData.length;
+        }
+    }
+    componentDidUpdate() {
+        if (this.shouldSetState) {
+            const nextState:IEnhancedReactTableState = Object.assign({}, this.state);
+            nextState.currentPage = Math.max(0, Math.min(nextState.currentPage, this.numPages() - 1));
+            this.shouldSetState = false;
+            this.setState(nextState);
+        }
+    }
+
     private numPages(itemsPerPage?:number) {
         itemsPerPage = itemsPerPage || this.state.itemsPerPage;
         if (itemsPerPage === -1) {
             return 1;
         } else {
-            return Math.ceil(this.props.rawData.length / itemsPerPage);
+            return Math.ceil(this.filteredDataLength / itemsPerPage);
         }
     }
 
@@ -441,5 +467,24 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
             columnVisibility,
             ...this.state
         });
+    }
+
+    private handleChangeItemsPerPage(itemsPerPage:number) {
+        const nextState = Object.assign({}, this.state);
+        nextState.itemsPerPage = itemsPerPage;
+        nextState.currentPage = Math.min(this.state.currentPage, this.numPages(nextState.itemsPerPage)-1);
+        this.setState(nextState);
+    }
+
+    private handlePreviousPageClick() {
+        const nextState = Object.assign({}, this.state);
+        nextState.currentPage = Math.max(0, this.state.currentPage - 1);
+        this.setState(nextState);
+    }
+
+    private handleNextPageClick() {
+        const nextState = Object.assign({}, this.state);
+        nextState.currentPage = Math.min(this.state.currentPage + 1, this.numPages() - 1);
+        this.setState(nextState);
     }
 };
