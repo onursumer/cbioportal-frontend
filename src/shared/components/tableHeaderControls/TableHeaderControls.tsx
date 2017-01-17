@@ -5,6 +5,7 @@ import fileDownload from 'react-file-download';
 import * as _ from 'lodash';
 import { IColumnVisibilityDef } from "../enhancedReactTable/IEnhancedReactTableProps";
 import { If, Then, Else } from 'react-if';
+import {TablePaginationControls, ITablePaginationControlsProps} from "../tablePaginationControls/TablePaginationControls";
 
 export interface ITableExportButtonsProps {
     tableData?: Array<any>;
@@ -12,9 +13,11 @@ export interface ITableExportButtonsProps {
     showSearch?: boolean;
     showCopyAndDownload?: boolean;
     showHideShowColumnButton?: boolean;
+    showPagination?:boolean;
     handleInput?: Function;
     columnVisibility?:Array<IColumnVisibilityDef>;
     onColumnToggled?: (columnId: String) => void;
+    paginationProps?:ITablePaginationControlsProps;
 }
 
 function serializeTableData(tableData: Array<any>) {
@@ -55,7 +58,9 @@ export default class TableExportButtons extends React.Component<ITableExportButt
 
     public static defaultProps: ITableExportButtonsProps = {
         showSearch:false,
-        showCopyAndDownload:true
+        showCopyAndDownload:true,
+        showPagination:true,
+        paginationProps:{}
     };
 
 
@@ -81,10 +86,11 @@ export default class TableExportButtons extends React.Component<ITableExportButt
 
         return (
             <div className={ (this.props.className || '') + '' }>
-
-
-
                 <ButtonToolbar>
+                    <If condition={this.props.showPagination}>
+                        <TablePaginationControls className="pull-left" {...this.props.paginationProps}/>
+                    </If>
+
                     <If condition={this.props.showHideShowColumnButton}>
                         <Dropdown id="dropdown-custom-1">
                             <Dropdown.Toggle rootCloseEvent="click" className="btn-sm">
@@ -124,7 +130,6 @@ export default class TableExportButtons extends React.Component<ITableExportButt
                             <span className="fa fa-search form-control-feedback" aria-hidden="true"></span>
                         </div>
                     </If>
-
                 </ButtonToolbar>
 
 

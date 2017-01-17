@@ -29,6 +29,12 @@ export default class MutationInformationContainer extends React.Component<IMutat
         this.mergedMutations = this.mergeMutations(this.props.mutations);
     }
 
+    componentWillUpdate(nextProps:IMutationInformationContainerProps, nextState:{}) {
+        if (nextProps.mutations !== this.props.mutations) {
+            this.mergedMutations = this.mergeMutations(nextProps.mutations);
+        }
+    }
+
     public render() {
         let columns:IColumnDefMap = {
             sampleId: {
