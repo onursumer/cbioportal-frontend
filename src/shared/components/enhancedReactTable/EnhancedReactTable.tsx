@@ -219,6 +219,11 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
 
     componentWillUpdate(nextProps:IEnhancedReactTableProps<T>, nextState:IEnhancedReactTableState) {
         if (nextState.filter.length === 0) {
+            // Normally, the way we update this.filteredDataLength is when Table.applyFilter is
+            // called (see "monkey patching" of Table.prototype.applyFilter).
+            // But if the filter text is empty, Table.applyFilter is not called and the
+            // entire input data is used, so we have to manually catch and handle this case here
+            // to keep this.filteredDataLength up to date.
             this.filteredDataLength = this.props.rawData.length;
         }
     }
