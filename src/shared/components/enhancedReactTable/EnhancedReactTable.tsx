@@ -224,10 +224,10 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
     }
     componentDidUpdate() {
         if (this.shouldSetState) {
-            const nextState:IEnhancedReactTableState = Object.assign({}, this.state);
-            nextState.currentPage = Math.max(0, Math.min(nextState.currentPage, this.numPages() - 1));
             this.shouldSetState = false;
-            this.setState(nextState);
+            this.setState({
+                currentPage: Math.max(0, Math.min(this.state.currentPage, this.numPages() - 1))
+            } as IEnhancedReactTableState);
         }
     }
 
@@ -470,21 +470,21 @@ export default class EnhancedReactTable<T> extends React.Component<IEnhancedReac
     }
 
     private handleChangeItemsPerPage(itemsPerPage:number) {
-        const nextState = Object.assign({}, this.state);
-        nextState.itemsPerPage = itemsPerPage;
-        nextState.currentPage = Math.min(this.state.currentPage, this.numPages(nextState.itemsPerPage)-1);
-        this.setState(nextState);
+        this.setState({
+            itemsPerPage: itemsPerPage,
+            currentPage: Math.min(this.state.currentPage, this.numPages(itemsPerPage)-1)
+        } as IEnhancedReactTableState);
     }
 
     private handlePreviousPageClick() {
-        const nextState = Object.assign({}, this.state);
-        nextState.currentPage = Math.max(0, this.state.currentPage - 1);
-        this.setState(nextState);
+        this.setState({
+            currentPage: Math.max(0, this.state.currentPage - 1)
+        } as IEnhancedReactTableState);
     }
 
     private handleNextPageClick() {
-        const nextState = Object.assign({}, this.state);
-        nextState.currentPage = Math.min(this.state.currentPage + 1, this.numPages() - 1);
-        this.setState(nextState);
+        this.setState({
+            currentPage: Math.min(this.state.currentPage + 1, this.numPages() - 1)
+        } as IEnhancedReactTableState);
     }
 };
