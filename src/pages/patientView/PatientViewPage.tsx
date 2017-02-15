@@ -34,7 +34,7 @@ import ClinicalInformationSamples from "./clinicalInformation/ClinicalInformatio
 import {ICosmicData} from "../../shared/components/mutationTable/column/CosmicColumnFormatter";
 import {IVariantCountData} from "./mutation/column/CohortColumnFormatter";
 import {observer} from "mobx-react";
-import {IHotspotData, IMyCancerGenomeData, IMyCancerGenome} from "./mutation/column/AnnotationColumnFormatter";
+import {IHotspotData, IMyCancerGenomeData, IMyCancerGenome, IOncoKbData} from "./mutation/column/AnnotationColumnFormatter";
 import {getSpans} from './clinicalInformation/lib/clinicalAttributesUtil.js';
 import CopyNumberAlterationsTable from "./copyNumberAlterations/CopyNumberAlterationsTable";
 import CopyNumberTableWrapper from "./copyNumberAlterations/CopyNumberTableWrapper";
@@ -61,6 +61,7 @@ interface IPatientViewState {
     myCancerGenomeData?: IMyCancerGenomeData;
     hotspotsData?: IHotspotData;
     cosmicData?: ICosmicData;
+    oncoKbData?: IOncoKbData;
     mutSigData?: MutSigData;
     variantCountData?: IVariantCountData;
     activeTabKey: number;
@@ -91,6 +92,8 @@ export default class PatientViewPage extends React.Component<IPatientViewPagePro
         this.state = {
             mutationData: undefined,
             hotspotsData: undefined,
+            cosmicData: undefined,
+            oncoKbData: undefined,
             variantCountData: undefined,
             activeTabKey:1
         };
@@ -510,6 +513,7 @@ export default class PatientViewPage extends React.Component<IPatientViewPagePro
                                     hotspots={this.state.hotspotsData}
                                     cosmicData={this.state.cosmicData}
                                     mrnaExprRankData={ patientViewPageStore.mrnaExprRankCache.cache }
+                                    oncoKbData={patientViewPageStore.oncoKbData.isComplete ? patientViewPageStore.oncoKbData.result : undefined}
                                     mutSigData={this.state.mutSigData}
                                     variantCountData={this.state.variantCountData}
                                     sampleOrder={sampleManager.sampleOrder}

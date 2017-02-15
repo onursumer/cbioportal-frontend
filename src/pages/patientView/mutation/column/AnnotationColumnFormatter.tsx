@@ -5,13 +5,21 @@ import {IColumnFormatterData} from "../../../../shared/components/enhancedReactT
 import {MutationTableRowData} from "../../../../shared/components/mutationTable/IMutationTableProps";
 import CancerHotspots from "../../../../shared/components/annotation/CancerHotspots";
 import MyCancerGenome from "../../../../shared/components/annotation/MyCancerGenome";
+import OncoKB from "../../../../shared/components/annotation/OncoKB";
 import {Mutation} from "../../../../shared/api/CBioPortalAPI";
+import {IndicatorQueryResp} from "../../../../shared/api/OncoKbAPI";
+import {generateQueryVariantId} from "../../../../shared/lib/OncoKbUtils";
 
 export interface IMyCancerGenome {
-    "hugoGeneSymbol": string;
-    "alteration": string;
-    "cancerType": string;
-    "linkHTML": string;
+    hugoGeneSymbol: string;
+    alteration: string;
+    cancerType: string;
+    linkHTML: string;
+}
+
+export interface IOncoKbData {
+    indicatorMap: {[id:string]: IndicatorQueryResp};
+    sampleToTumorMap: {[sampleId:string]: string};
 }
 
 export interface IHotspotData {
@@ -27,6 +35,7 @@ export interface IAnnotation {
     isHotspot: boolean;
     is3dHotspot: boolean;
     myCancerGenomeLinks: string[];
+    oncoKbIndicator?: IndicatorQueryResp;
 }
 
 /**
@@ -52,15 +61,18 @@ export default class AnnotationColumnFormatter
 
     public static getDataFromRow(rowData:MutationTableRowData|undefined,
                                  hotspotsData?:IHotspotData,
-                                 myCancerGenomeData?:IMyCancerGenomeData)
+                                 myCancerGenomeData?:IMyCancerGenomeData,
+                                 oncoKbData?:IOncoKbData)
     {
-        let value: any;
+        let value: IAnnotation;
 
         if (rowData) {
             const mutations:Mutation[] = rowData;
             const mutation = mutations[0];
 
             value = {
+                oncoKbIndicator: oncoKbData ?
+                    AnnotationColumnFormatter.getIndicatorData(mutation, oncoKbData) : undefined,
                 myCancerGenomeLinks: myCancerGenomeData ?
                     AnnotationColumnFormatter.getMyCancerGenomeLinks(mutation, myCancerGenomeData) : [],
                 isHotspot: hotspotsData ?
@@ -70,10 +82,24 @@ export default class AnnotationColumnFormatter
             };
         }
         else {
-            value = null;
+            value = {
+                myCancerGenomeLinks: [],
+                isHotspot: false,
+                is3dHotspot: false
+            };
         }
 
         return value;
+    }
+
+    public static getIndicatorData(mutation:Mutation, oncoKbData:IOncoKbData):IndicatorQueryResp
+    {
+        const id = generateQueryVariantId(mutation.gene.hugoGeneSymbol,
+            mutation.mutationType,
+            mutation.proteinChange,
+            oncoKbData.sampleToTumorMap[mutation.sampleId]);
+
+        return oncoKbData.indicatorMap[id];
     }
 
     public static getMyCancerGenomeLinks(mutation:Mutation, myCancerGenomeData: IMyCancerGenomeData):string[] {
@@ -141,7 +167,7 @@ export default class AnnotationColumnFormatter
     public static renderFunction(data:IColumnFormatterData<MutationTableRowData>, columnProps:any)
     {
         const annotation:IAnnotation = AnnotationColumnFormatter.getDataFromRow(
-            data.rowData, columnProps.hotspots, columnProps.myCancerGenomeData);
+            data.rowData, columnProps.hotspots, columnProps.myCancerGenomeData, columnProps.oncoKbData);
 
         // TODO if certain data (hotspots, mycancergenome, etc.) is not yet available (i.e. status==fetching),
         // show a loader image!
@@ -149,7 +175,9 @@ export default class AnnotationColumnFormatter
             <Td key={data.name} column={data.name} value={annotation}>
                 <span>
                     <If condition={columnProps.enableOncoKb || false}>
-                        {/* TODO <OncoKB></OncoKB>*/}
+                        <OncoKB
+                            indicator={annotation.oncoKbIndicator}
+                        />
                     </If>
                     <If condition={columnProps.enableMyCancerGenome || false}>
                         <MyCancerGenome
@@ -166,17 +194,4 @@ export default class AnnotationColumnFormatter
             </Td>
         );
     }
-
-    // TODO move this to OncoKB component!
-    public static oncoKbContent()
-    {
-        // return (
-        //     <span className={`${styles["annotation-item"]} oncokb oncokb_alteration oncogenic`}>
-        //         <img className='oncokb oncogenic' width="14" height="14" src="images/ajax-loader.gif" alt='loading' />
-        //     </span>
-        // )
-
-        return null;
-    }
-
 }
