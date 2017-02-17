@@ -138,12 +138,13 @@ export default class AnnotationColumnFormatter
 
     public static sortFunction(a:IAnnotation, b:IAnnotation):number
     {
-        // TODO add oncoKb value to the beginning of the array when it is ready!
         const aValue:number[] = [
+            OncoKB.sortValue(a.oncoKbIndicator),
             MyCancerGenome.sortValue(a.myCancerGenomeLinks),
             CancerHotspots.sortValue(a.isHotspot, a.is3dHotspot)
         ];
         const bValue:number[] = [
+            OncoKB.sortValue(b.oncoKbIndicator),
             MyCancerGenome.sortValue(b.myCancerGenomeLinks),
             CancerHotspots.sortValue(b.isHotspot, b.is3dHotspot)
         ];

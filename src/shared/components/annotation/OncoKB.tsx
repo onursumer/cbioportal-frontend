@@ -1,9 +1,12 @@
 import * as React from 'react';
+import * as _ from 'lodash';
 import DefaultTooltip from 'shared/components/DefaultTooltip';
 import annotationStyles from "./styles/annotation.module.scss";
 import oncogenicIconStyles from "./styles/oncogenicIcon.module.scss";
 import {IndicatorQueryResp} from "../../api/OncoKbAPI";
-import {oncogenicImageClassNames} from "../../lib/OncoKbUtils";
+import {
+    oncogenicImageClassNames, calcOncogenicScore, calcSensitivityLevelScore, calcResistanceLevelScore
+} from "../../lib/OncoKbUtils";
 
 export interface IOncoKbProps {
     indicator?: IndicatorQueryResp;
@@ -19,10 +22,26 @@ export function placeArrow(tooltipEl: any) {
  */
 export default class OncoKB extends React.Component<IOncoKbProps, {}>
 {
-    // TODO determine the method param and return value
-    public static sortValue():number
+    public static sortValue(indicator:IndicatorQueryResp|undefined):number
     {
-        return -1;
+        if (!indicator) {
+            return -1;
+        }
+
+        const values:number[] = [];
+
+        values[0] = (indicator.variantExist || indicator.alleleExist || indicator.vus) ? 1 : 0;
+        values[1] = calcOncogenicScore(indicator.oncogenic, indicator.vus);
+        values[2] = (indicator.variantExist || indicator.alleleExist) ? 1 : 0;
+        values[3] = calcSensitivityLevelScore(indicator.highestSensitiveLevel);
+        values[4] = calcResistanceLevelScore(indicator.highestResistanceLevel);
+
+        // TODO not a good solution! we should just return the array, and let the caller figure it out!
+        const maxValue = _.max(values);
+
+        return values.reduce((previousValue: number, currentValue: number):number => {
+            return (previousValue || 1) * maxValue + currentValue;
+        });
     }
 
     constructor(props: IOncoKbProps)

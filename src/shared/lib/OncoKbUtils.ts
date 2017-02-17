@@ -30,7 +30,7 @@ export function generateQueryVariant(hugoSymbol:string,
         alterationType: "MUTATION",
         entrezGeneId: 0,
         alteration: proteinChange,
-        consequence: consequenceConverter(mutationType),
+        consequence: convertConsequence(mutationType),
         proteinStart: proteinPosStart,
         proteinEnd: proteinPosEnd,
     };
@@ -44,7 +44,7 @@ export function generateQueryVariantId(hugoSymbol:string,
     return `${hugoSymbol}_${proteinChange}_${tumorType}_${mutationType}`;
 }
 
-function getLevel(level:string):string|null
+function normalizeLevel(level:string):string|null
 {
     if (level)
     {
@@ -77,8 +77,8 @@ export function oncogenicImageClassNames(oncogenic:string,
         'Oncogenic': 'oncogenic',
     };
 
-    const sl = getLevel(highestSensitiveLevel);
-    const rl = getLevel(highestResistanceLevel);
+    const sl = normalizeLevel(highestSensitiveLevel);
+    const rl = normalizeLevel(highestResistanceLevel);
 
     if (!rl && sl)
     {
@@ -103,13 +103,58 @@ export function oncogenicImageClassNames(oncogenic:string,
     return classNames;
 }
 
+export function calcOncogenicScore(oncogenic:string, isVus:boolean)
+{
+    const oncogenicScore:{[oncogenic:string]: number} = {
+        'Unknown': 2,
+        'Inconclusive': 3,
+        'Likely Neutral': 4,
+        'Likely Oncogenic': 5,
+        'Oncogenic': 5
+    };
+
+    let score:number = oncogenicScore[oncogenic] || 0;
+
+    if (score === 0 && isVus) {
+        score = 1;
+    }
+
+    return score;
+}
+
+export function calcSensitivityLevelScore(level:string)
+{
+    const levelScore:{[level:string]: number} = {
+        '0': 1,
+        '1': 2,
+        '2A': 3,
+        '2B': 4,
+        '3A': 5,
+        '3B': 6,
+        '4': 7
+    };
+
+    return levelScore[normalizeLevel(level) || ""] || 0;
+}
+
+export function calcResistanceLevelScore(level:string)
+{
+    const levelScore:{[level:string]: number} = {
+        'R1': 1,
+        'R2': 2,
+        'R3': 3,
+    };
+
+    return levelScore[normalizeLevel(level) || ""] || 0;
+}
+
 /**
  * Convert cBioPortal consequence to OncoKB consequence
  *
  * @param consequence cBioPortal consequence
  * @returns
  */
-export function consequenceConverter(consequence:string) {
+export function convertConsequence(consequence:string) {
     const matrix:{[consequence:string]: string[]} = {
         '3\'Flank': ['any'],
         '5\'Flank ': ['any'],
