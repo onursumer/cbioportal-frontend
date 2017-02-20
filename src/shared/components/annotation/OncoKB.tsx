@@ -61,7 +61,6 @@ export default class OncoKB extends React.Component<IOncoKbProps, {}>
             const arrowContent = <div className="rc-tooltip-arrow-inner"/>;
             const tooltipContent = <span>TODO: OncoKB Card Here!</span>;
 
-            // TODO display icon wrt the indicator value
             oncoKbContent = (
                 <DefaultTooltip
                     overlay={tooltipContent}

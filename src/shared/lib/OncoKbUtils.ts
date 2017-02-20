@@ -183,7 +183,7 @@ export function convertConsequence(consequence:string) {
         'vIII deletion': ['any']
     };
 
-    if (consequence in matrix) {
+    if (consequence in matrix && matrix.hasOwnProperty(consequence)) {
         return matrix[consequence].join(',');
     } else {
         return 'any';
