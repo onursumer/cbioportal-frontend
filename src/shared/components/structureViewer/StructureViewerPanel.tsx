@@ -5,25 +5,12 @@ import Collapse from 'react-collapse';
 import {ThreeBounce} from 'better-react-spinkit';
 import {observable, computed} from "mobx";
 import {observer} from "mobx-react";
+import Draggable from 'react-draggable';
+import DefaultTooltip from "shared/components/DefaultTooltip";
+import {ProteinScheme, ProteinColor, SideChain, MutationColor, default as StructureViewer} from "./StructureViewer";
 
 export interface IStructureViewerPanelProps {
 
-}
-
-export enum ProteinScheme {
-    CARTOON, SPACE_FILLING, TRACE
-}
-
-export enum ProteinColor {
-    UNIFORM, SECONDARY_STRUCTURE, NC_RAINBOW, ATOM_TYPE
-}
-
-export enum SideChain {
-    ALL, SELECTED, NONE
-}
-
-export enum MutationColor {
-    UNIFORM, MUTATION_TYPE, NONE
 }
 
 @observer
@@ -35,6 +22,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     @observable protected sideChain:SideChain = SideChain.SELECTED;
     @observable protected mutationColor:MutationColor = MutationColor.MUTATION_TYPE;
     @observable protected displayBoundMolecules:boolean = true;
+    @observable protected isClosed:boolean = false;
 
     constructor() {
         super();
@@ -45,34 +33,144 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         this.handleSideChainChange = this.handleSideChainChange.bind(this);
         this.handleMutationColorChange = this.handleMutationColorChange.bind(this);
         this.handleBoundMoleculeChange = this.handleBoundMoleculeChange.bind(this);
+        this.handlePyMolDownload = this.handlePyMolDownload.bind(this);
+        this.handlePanelClose = this.handlePanelClose.bind(this);
+    }
+
+    public selectionTitle(text: string, tooltip?: JSX.Element)
+    {
+        let content:JSX.Element|null = null;
+
+        if (tooltip)
+        {
+            content = this.defaultInfoTooltip(tooltip);
+        }
+
+        return (
+            <span>
+                {text} {content}:
+            </span>
+        )
+    }
+
+    public defaultInfoTooltip(tooltip: JSX.Element)
+    {
+        return (
+            <DefaultTooltip
+                placement="top"
+                overlay={() => tooltip}
+                arrowContent={<div className="rc-tooltip-arrow-inner"/>}
+                destroyTooltipOnHide={true}
+            >
+                <i className="fa fa-info-circle"/>
+            </DefaultTooltip>
+        );
+    }
+
+    public proteinColorTooltipContent()
+    {
+        return (
+            <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
+                Color options for the protein structure.<br />
+                <br />
+                <b>Uniform:</b> Colors the entire protein structure with a
+                <span className='mutation-3d-loop'>single color</span>.<br />
+                <b>Secondary structure:</b> Colors the protein by secondary structure.
+                Assigns different colors for <span className='mutation-3d-alpha-helix'>alpha helices</span>,
+                <span className='mutation-3d-beta-sheet'>beta sheets</span>, and
+                <span className='mutation-3d-loop'>loops</span>.
+                This color option is not available for the space-filling protein scheme.<br />
+                <b>N-C rainbow:</b> Colors the protein with a rainbow gradient
+                from red (N-terminus) to blue (C-terminus).<br />
+                <b>Atom Type:</b> Colors the structure with respect to the atom type (CPK color scheme).
+                This color option is only available for the space-filling protein scheme.<br />
+                <br />
+                The selected chain is always displayed with full opacity while the rest of the structure
+                has some transparency to help better focusing on the selected chain.
+            </div>
+        )
+    }
+
+
+    public sideChainTooltipContent()
+    {
+        return (
+            <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
+                Display options for the side chain atoms.<br />
+                <br />
+                <b>All:</b> Displays the side chain atoms for every mapped residue.<br />
+                <b>Selected:</b> Displays the side chain atoms only for the selected mutations.<br />
+                <b>None:</b> Hides the side chain atoms.<br />
+                <br />
+                This option has no effect for the space-filling protein scheme.
+            </div>
+        );
+    }
+
+    public mutationColorTooltipContent()
+    {
+        return (
+            <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
+                Color options for the mapped mutations.<br />
+                <br />
+                <b>Uniform:</b> Colors all mutated residues with a
+                <span className='uniform_mutation'>single color</span>.<br/>
+                <b>Mutation type:</b> Enables residue coloring by mutation type.
+                Mutation types and corresponding color codes are as follows:
+                <ul>
+                    <li>
+                        <span className='missense_mutation'>Missense Mutations</span>
+                    </li>
+                    <li>
+                        <span className='trunc_mutation'>Truncating Mutations</span>
+                        (Nonsense, Nonstop, FS del, FS ins)
+                    </li>
+                    <li>
+                        <span className='inframe_mutation'>Inframe Mutations</span>
+                        (IF del, IF ins)
+                    </li>
+                </ul>
+                <b>None:</b> Disables coloring of the mutated residues
+                except for manually selected (highlighted) residues.<br />
+                <br />
+                Highlighted residues are colored with <span className='mutation-3d-highlighted'>yellow</span>.
+            </div>
+        );
+    }
+
+    public boundMoleculesTooltipContent()
+    {
+        return (
+            <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
+                Displays co-crystalized molecules.
+                This option has no effect if the current structure does not contain any co-crystalized bound molecules.
+            </div>
+        );
     }
 
     public proteinStyleMenu()
     {
         return (
             <span>
-                <div className='mutation-3d-style-header'>
+                <div className='row text-center'>
                     <span>Protein Style</span>
+                    <hr />
                 </div>
-                <table>
-                    <tr>
-                        <td>
-                            <Checkbox
-                                className='mutation-3d-display-non-protein'
-                                checked={this.displayBoundMolecules}
-                                onChange={this.handleBoundMoleculeChange as React.FormEventHandler<any>}
-                            >
-                                Display bound molecules
-                            </Checkbox>
-                            <img className='display-non-protein-help' src='{{helpImage}}'
-                                 alt='Help (non-protein display)' />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span>Scheme:</span>
+                <div className='row'>
+                    <Checkbox
+                        checked={this.displayBoundMolecules}
+                        onChange={this.handleBoundMoleculeChange as React.FormEventHandler<any>}
+                    >
+                        Display bound molecules {this.defaultInfoTooltip(this.boundMoleculesTooltipContent())}
+                    </Checkbox>
+                </div>
+                <div className="row">
+                    <div className="col col-sm-6">
+                        <div className="row">
+                            {this.selectionTitle("Scheme")}
+                        </div>
+                        <div className="row">
                             <FormControl
-                                className="mutation-3d-protein-style-select"
                                 componentClass="select"
                                 title='Select 3d protein style'
                                 value={`${this.proteinScheme}`}
@@ -85,35 +183,50 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                                 <option value={ProteinScheme.TRACE}
                                         title='Switch to the Trace Scheme'>trace</option>
                             </FormControl>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span>Color:</span>
+                        </div>
+                    </div>
+                    <div className="col col-sm-6">
+                        <div className="row">
+                            {this.selectionTitle("Color", this.proteinColorTooltipContent())}
+                        </div>
+                        <div className="row">
                             <FormControl
-                                className="mutation-3d-protein-color-select"
                                 componentClass="select"
                                 title='Select 3d protein coloring'
                                 value={`${this.proteinColor}`}
                                 onChange={this.handleProteinColorChange as React.FormEventHandler<any>}
                             >
-                                <option value={ProteinColor.UNIFORM}
-                                        title='Uniform Color'>uniform</option>
-                                <option value={ProteinColor.SECONDARY_STRUCTURE}
-                                        title='Color by Secondary Structure'
-                                        disabled={this.colorBySecondaryStructureDisabled}>secondary structure</option>
-                                <option value={ProteinColor.NC_RAINBOW}
-                                        title='Color by Rainbow Gradient'
-                                        disabled={this.colorByNCRainbowDisabled}>N-C rainbow</option>
-                                <option value={ProteinColor.ATOM_TYPE}
-                                        title='Color by Atom Type'
-                                        disabled={this.colorByAtomTypeDisabled}>atom type</option>
+                                <option
+                                    value={ProteinColor.UNIFORM}
+                                    title='Uniform Color'
+                                >
+                                    uniform
+                                </option>
+                                <option
+                                    value={ProteinColor.SECONDARY_STRUCTURE}
+                                    title='Color by Secondary Structure'
+                                    disabled={this.colorBySecondaryStructureDisabled}
+                                >
+                                    secondary structure
+                                </option>
+                                <option
+                                    value={ProteinColor.NC_RAINBOW}
+                                    title='Color by Rainbow Gradient'
+                                    disabled={this.colorByNCRainbowDisabled}
+                                >
+                                    N-C rainbow
+                                </option>
+                                <option
+                                    value={ProteinColor.ATOM_TYPE}
+                                    title='Color by Atom Type'
+                                    disabled={this.colorByAtomTypeDisabled}
+                                >
+                                    atom type
+                                </option>
                             </FormControl>
-                            <img className='protein-struct-color-help' src='{{helpImage}}'
-                                 alt='Help (protein coloring)' />
-                        </td>
-                    </tr>
-                </table>
+                        </div>
+                    </div>
+                </div>
             </span>
         );
     }
@@ -122,125 +235,183 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <span>
-                <div className='mutation-3d-style-header'>
-                    <label>Mutation Style</label>
+                <div className='row text-center'>
+                    <span>Mutation Style</span>
+                    <hr />
                 </div>
-                <table>
-                    <tr>
-                        <td>
-                            <span>Side chain:</span>
+                <div className="row">
+                    <div className="col col-sm-6">
+                        <div className="row">
+                            {this.selectionTitle("Side Chain", this.sideChainTooltipContent())}
+                        </div>
+                        <div className="row">
                             <FormControl
-                                className="mutation-3d-side-chain-select"
                                 componentClass="select"
                                 title='Select 3d protein side-chain display'
                                 value={`${this.sideChain}`}
                                 onChange={this.handleSideChainChange as React.FormEventHandler<any>}
                             >
-                                <option value={SideChain.ALL}
-                                        title='Display side chain for all mapped residues'>all</option>
-                                <option value={SideChain.SELECTED}
-                                        title='Display side chain for highlighted residues only'>selected</option>
-                                <option value={SideChain.NONE}
-                                        title='Do not display side chains'>none</option>
+                                <option
+                                    value={SideChain.ALL}
+                                    title='Display side chain for all mapped residues'
+                                >
+                                    all
+                                </option>
+                                <option
+                                    value={SideChain.SELECTED}
+                                    title='Display side chain for highlighted residues only'
+                                >
+                                    selected
+                                </option>
+                                <option
+                                    value={SideChain.NONE}
+                                    title='Do not display side chains'
+                                >
+                                    none
+                                </option>
                             </FormControl>
-                            <img className='display-side-chain-help' src='{{helpImage}}'
-                                 alt='Help (side chain display)' />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span>Color:</span>
+                        </div>
+                    </div>
+                    <div className="col col-sm-6">
+                        <div className="row">
+                            {this.selectionTitle("Color", this.mutationColorTooltipContent())}
+                        </div>
+                        <div className="row">
                             <FormControl
-                                className="mutation-3d-mutation-color-select"
                                 componentClass="select"
                                 title='Select 3d protein mutation color'
                                 value={`${this.mutationColor}`}
                                 onChange={this.handleMutationColorChange as React.FormEventHandler<any>}
                             >
-                                <option value={MutationColor.UNIFORM}
-                                        title='Uniform color'>uniform</option>
-                                <option value={MutationColor.MUTATION_TYPE}
-                                        title='Color by mutation type'>mutation type</option>
-                                <option value={MutationColor.NONE}
-                                        title='Do not color'>none</option>
+                                <option
+                                    value={MutationColor.UNIFORM}
+                                    title='Uniform color'
+                                >
+                                    uniform
+                                </option>
+                                <option
+                                    value={MutationColor.MUTATION_TYPE}
+                                    title='Color by mutation type'
+                                >
+                                    mutation type
+                                </option>
+                                <option
+                                    value={MutationColor.NONE}
+                                    title='Do not color'
+                                >
+                                    none
+                                </option>
                             </FormControl>
-                            <img className='mutation-type-color-help' src='{{helpImage}}'
-                                 alt='Help (mutation type coloring)' />
-                        </td>
-                    </tr>
-                </table>
+                        </div>
+                    </div>
+                </div>
             </span>
+        );
+    }
+
+    public topToolbar()
+    {
+        return (
+            <div className='row'>
+                <div className="col col-sm-4">
+                    <button
+                        className='btn btn-default btn-sm'
+                        onClick={this.handlePyMolDownload}
+                    >
+                        PyMOL
+                    </button>
+                </div>
+                <div className="col col-sm-8" onClick={this.toggleHelpCollapse}>
+                    <span className="pull-right">
+                        <span>how to pan/zoom/rotate?</span>
+                        <If condition={this.isHelpCollapsed}>
+                            <Then>
+                                <i className="fa fa-chevron-down"/>
+                            </Then>
+                            <Else>
+                                <i className="fa fa-chevron-up"/>
+                            </Else>
+                        </If>
+                    </span>
+                </div>
+            </div>
         );
     }
 
     public helpContent()
     {
         return (
-            <div>
+            <div className="col col-sm-12">
                 <h4>3D visualizer basic interaction</h4>
-                <b>Zoom in/out:</b> Press and hold the SHIFT key and the left mouse button, and then move the mouse backward/forward.<br/>
-                <b>Pan:</b> Press and hold the CTRL key, click and hold the left mouse button, and then move the mouse in the desired direction.<br/>
-                <b>Rotate:</b> Press and hold the left mouse button, and then move the mouse in the desired direction to rotate along the x and y axes.<br/>
+                <b>Zoom in/out:</b> Press and hold the SHIFT key and the left mouse button, and then move the mouse backward/forward.<br />
+                <b>Pan:</b> Press and hold the CTRL key, click and hold the left mouse button, and then move the mouse in the desired direction.<br />
+                <b>Rotate:</b> Press and hold the left mouse button, and then move the mouse in the desired direction to rotate along the x and y axes.<br />
             </div>
         );
     }
 
-    public render() {
+    public header()
+    {
         return (
-            <div>
-                <If condition={false}>
-                    <span className='mutation-3d-residue-warning'>
-                        Selected location(s) cannot be mapped onto this structure
-                    </span>
-                </If>
-                <div className='mutation-3d-vis-container'>
-                    displayBoundMolecules: {`${this.displayBoundMolecules}`} <br/>
-                    isHelpCollapsed: {`${this.isHelpCollapsed}`} <br/>
-                    selectedScheme: {this.proteinScheme} <br/>
-                    selectedProteinColor: {this.proteinColor} <br/>
-                    selectedSideChain: {this.sideChain} <br/>
-                    selectedMutationColor: {this.mutationColor} <br/>
+            <div className='row'>
+                <div className='col col-sm-8'>
+                    <span>3D Structure</span>
                 </div>
-                <div className='mutation-3d-vis-toolbar'>
-                    <div className='mutation-3d-vis-help-init'>
-                        <table>
-                            <tr>
-                                <td>
-                                    <button className='mutation-3d-pymol-dload'>PyMOL</button>
-                                </td>
-                                <td>
-                                    <div className="mutation-3d-vis-help-open" onClick={this.toggleHelpCollapse}>
-                                        how to pan/zoom/rotate?
-                                        <span className="secondary-content">
-                                            <If condition={this.isHelpCollapsed}>
-                                                <Then>
-                                                    <i className="fa fa-chevron-down"/>
-                                                </Then>
-                                                <Else>
-                                                    <i className="fa fa-chevron-up"/>
-                                                </Else>
-                                            </If>
-                                        </span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <Collapse isOpened={!this.isHelpCollapsed}>
-                        {this.helpContent()}
-                    </Collapse>
-                    <table className="mutation-3d-controls-menu">
-                        <tr>
-                            <td className='mutation-3d-protein-style-menu'>
-                                {this.proteinStyleMenu()}
-                            </td>
-                            <td className='mutation-3d-mutation-style-menu'>
-                                {this.mutationStyleMenu()}
-                            </td>
-                        </tr>
-                    </table>
+                <div className="col col-sm-4">
+                    <span className="pull-right">
+                        <i className="fa fa-times" onClick={this.handlePanelClose}/>
+                    </span>
                 </div>
             </div>
+        )
+    }
+
+    public render() {
+        if (this.isClosed) {
+            return null;
+        }
+
+        return (
+            <Draggable
+                handle=".structure-viewer-header"
+            >
+                <div>
+                    <div className="structure-viewer-header row">
+                        {this.header()}
+                        <hr/>
+                    </div>
+                    <If condition={false}>
+                        <span>
+                            Selected location(s) cannot be mapped onto this structure
+                        </span>
+                    </If>
+                    <div className='mutation-3d-vis-container row'>
+                        <StructureViewer
+                            displayBoundMolecules={this.displayBoundMolecules}
+                            proteinScheme={this.proteinScheme}
+                            proteinColor={this.proteinColor}
+                            sideChain={this.sideChain}
+                            mutationColor={this.mutationColor}
+                        />
+                    </div>
+                    <div className='row'>
+                        {this.topToolbar()}
+                        <div className="row">
+                            <Collapse isOpened={!this.isHelpCollapsed}>
+                                {this.helpContent()}
+                            </Collapse>
+                        </div>
+                        <div className="row">
+                            <div className='col col-sm-6'>
+                                {this.proteinStyleMenu()}
+                            </div>
+                            <div className='col col-sm-6'>
+                                {this.mutationStyleMenu()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Draggable>
         );
     }
 
@@ -279,6 +450,14 @@ export default class StructureViewerPanel extends React.Component<IStructureView
 
     private handleBoundMoleculeChange() {
         this.displayBoundMolecules = !this.displayBoundMolecules;
+    }
+
+    private handlePyMolDownload() {
+        // TODO generate a PyMol script for the current state of the viewer
+    }
+
+    private handlePanelClose() {
+        this.isClosed = true;
     }
 
     @computed get colorBySecondaryStructureDisabled()
