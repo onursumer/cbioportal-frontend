@@ -9,8 +9,11 @@ import Draggable from 'react-draggable';
 import DefaultTooltip from "shared/components/DefaultTooltip";
 import {ProteinScheme, ProteinColor, SideChain, MutationColor, default as StructureViewer} from "./StructureViewer";
 
-export interface IStructureViewerPanelProps {
+import styles from "./structureViewer.module.scss";
 
+export interface IStructureViewerPanelProps {
+    pdbId: string;
+    chainId: string;
 }
 
 @observer
@@ -171,6 +174,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         </div>
                         <div className="row">
                             <FormControl
+                                className={styles["default-option-select"]}
                                 componentClass="select"
                                 title='Select 3d protein style'
                                 value={`${this.proteinScheme}`}
@@ -191,6 +195,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         </div>
                         <div className="row">
                             <FormControl
+                                className={styles["default-option-select"]}
                                 componentClass="select"
                                 title='Select 3d protein coloring'
                                 value={`${this.proteinColor}`}
@@ -246,6 +251,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         </div>
                         <div className="row">
                             <FormControl
+                                className={styles["default-option-select"]}
                                 componentClass="select"
                                 title='Select 3d protein side-chain display'
                                 value={`${this.sideChain}`}
@@ -278,6 +284,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         </div>
                         <div className="row">
                             <FormControl
+                                className={styles["default-option-select"]}
                                 componentClass="select"
                                 title='Select 3d protein mutation color'
                                 value={`${this.mutationColor}`}
@@ -341,8 +348,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     public helpContent()
     {
         return (
-            <div className="col col-sm-12">
-                <h4>3D visualizer basic interaction</h4>
+            <div className={`${styles["help-content"]} col col-sm-12`}>
                 <b>Zoom in/out:</b> Press and hold the SHIFT key and the left mouse button, and then move the mouse backward/forward.<br />
                 <b>Pan:</b> Press and hold the CTRL key, click and hold the left mouse button, and then move the mouse in the desired direction.<br />
                 <b>Rotate:</b> Press and hold the left mouse button, and then move the mouse in the desired direction to rotate along the x and y axes.<br />
@@ -366,6 +372,35 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         )
     }
 
+    public pdbInfo(pdbId:string, chainId:string)
+    {
+        // TODO get info from PDB cache
+        const pdbInfo = null;
+        const molInfo = null;
+
+        return (
+            <div>
+                <div className="row">
+                    <span>PDB </span>
+                    <span>
+                        <a
+                            href={`http://www.rcsb.org/pdb/explore/explore.do?structureId=${pdbId}`}
+                            target="_blank"
+                        >
+                            {pdbId}
+                        </a>
+                    </span>
+                    <span>: {pdbInfo}</span>
+                </div>
+                <div className="row">
+                    <span>Chain </span>
+                    <span>{chainId}</span>
+                    <span>: {molInfo}</span>
+                </div>
+            </div>
+        );
+    }
+
     public render() {
         if (this.isClosed) {
             return null;
@@ -375,10 +410,13 @@ export default class StructureViewerPanel extends React.Component<IStructureView
             <Draggable
                 handle=".structure-viewer-header"
             >
-                <div>
+                <div className={styles["main-3d-panel"]}>
                     <div className="structure-viewer-header row">
                         {this.header()}
                         <hr/>
+                    </div>
+                    <div className="row">
+                        {this.pdbInfo(this.props.pdbId, this.props.chainId)}
                     </div>
                     <If condition={false}>
                         <span>
@@ -392,6 +430,8 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             proteinColor={this.proteinColor}
                             sideChain={this.sideChain}
                             mutationColor={this.mutationColor}
+                            pdbId={this.props.pdbId}
+                            chainId={this.props.chainId}
                         />
                     </div>
                     <div className='row'>
