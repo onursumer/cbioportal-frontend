@@ -1,13 +1,13 @@
 import * as React from 'react';
 import {FormControl, Checkbox} from 'react-bootstrap';
 import {If, Else, Then} from 'react-if';
-import Collapse from 'react-collapse';
 import {ThreeBounce} from 'better-react-spinkit';
 import {observable, computed} from "mobx";
 import {observer} from "mobx-react";
 import Draggable from 'react-draggable';
 import DefaultTooltip from "shared/components/DefaultTooltip";
-import {ProteinScheme, ProteinColor, SideChain, MutationColor, default as StructureViewer} from "./StructureViewer";
+import StructureViewer from "./StructureViewer";
+import {ProteinScheme, ProteinColor, SideChain, MutationColor} from "./StructureVisualizerWrapper";
 
 import styles from "./structureViewer.module.scss";
 
@@ -53,15 +53,17 @@ export default class StructureViewerPanel extends React.Component<IStructureView
             <span>
                 {text} {content}:
             </span>
-        )
+        );
     }
 
     public defaultInfoTooltip(tooltip: JSX.Element, placement:string = "top")
     {
+        const tooltipCallback = () => tooltip;
+
         return (
             <DefaultTooltip
                 placement={placement}
-                overlay={() => tooltip}
+                overlay={tooltipCallback}
                 arrowContent={<div className="rc-tooltip-arrow-inner"/>}
                 destroyTooltipOnHide={true}
             >
@@ -91,7 +93,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                 The selected chain is always displayed with full opacity while the rest of the structure
                 has some transparency to help better focusing on the selected chain.
             </div>
-        )
+        );
     }
 
 
@@ -336,7 +338,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                     </span>
                 </div>
             </div>
-        )
+        );
     }
 
     public pdbInfo(pdbId:string, chainId:string)
