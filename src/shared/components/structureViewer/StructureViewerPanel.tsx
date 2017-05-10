@@ -40,13 +40,13 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         this.handlePanelClose = this.handlePanelClose.bind(this);
     }
 
-    public selectionTitle(text: string, tooltip?: JSX.Element)
+    public selectionTitle(text: string, tooltip?: JSX.Element, placement:string = "top")
     {
         let content:JSX.Element|null = null;
 
         if (tooltip)
         {
-            content = this.defaultInfoTooltip(tooltip);
+            content = this.defaultInfoTooltip(tooltip, placement);
         }
 
         return (
@@ -56,16 +56,16 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         )
     }
 
-    public defaultInfoTooltip(tooltip: JSX.Element)
+    public defaultInfoTooltip(tooltip: JSX.Element, placement:string = "top")
     {
         return (
             <DefaultTooltip
-                placement="top"
+                placement={placement}
                 overlay={() => tooltip}
                 arrowContent={<div className="rc-tooltip-arrow-inner"/>}
                 destroyTooltipOnHide={true}
             >
-                <i className="fa fa-info-circle"/>
+                <i className="fa fa-info-circle" />
             </DefaultTooltip>
         );
     }
@@ -74,19 +74,19 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
-                Color options for the protein structure.<br />
+                Color options for the protein structure. <br />
                 <br />
                 <b>Uniform:</b> Colors the entire protein structure with a
-                <span className='mutation-3d-loop'>single color</span>.<br />
+                <span className={styles['loop']}> single color</span>. <br />
                 <b>Secondary structure:</b> Colors the protein by secondary structure.
-                Assigns different colors for <span className='mutation-3d-alpha-helix'>alpha helices</span>,
-                <span className='mutation-3d-beta-sheet'>beta sheets</span>, and
-                <span className='mutation-3d-loop'>loops</span>.
-                This color option is not available for the space-filling protein scheme.<br />
+                Assigns different colors for <span className={styles['alpha-helix']}>alpha helices</span>,
+                <span className={styles['beta-sheet']}> beta sheets</span>, and
+                <span className={styles['loop']}> loops</span>.
+                This color option is not available for the space-filling protein scheme. <br />
                 <b>N-C rainbow:</b> Colors the protein with a rainbow gradient
-                from red (N-terminus) to blue (C-terminus).<br />
+                from red (N-terminus) to blue (C-terminus). <br />
                 <b>Atom Type:</b> Colors the structure with respect to the atom type (CPK color scheme).
-                This color option is only available for the space-filling protein scheme.<br />
+                This color option is only available for the space-filling protein scheme. <br />
                 <br />
                 The selected chain is always displayed with full opacity while the rest of the structure
                 has some transparency to help better focusing on the selected chain.
@@ -99,11 +99,11 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
-                Display options for the side chain atoms.<br />
+                Display options for the side chain atoms. <br />
                 <br />
-                <b>All:</b> Displays the side chain atoms for every mapped residue.<br />
-                <b>Selected:</b> Displays the side chain atoms only for the selected mutations.<br />
-                <b>None:</b> Hides the side chain atoms.<br />
+                <b>All:</b> Displays the side chain atoms for every mapped residue. <br />
+                <b>Selected:</b> Displays the side chain atoms only for the selected mutations. <br />
+                <b>None:</b> Hides the side chain atoms. <br />
                 <br />
                 This option has no effect for the space-filling protein scheme.
             </div>
@@ -114,29 +114,29 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
-                Color options for the mapped mutations.<br />
+                Color options for the mapped mutations. <br />
                 <br />
                 <b>Uniform:</b> Colors all mutated residues with a
-                <span className='uniform_mutation'>single color</span>.<br/>
+                <span className={styles['uniform-mutation']}> single color</span>. <br />
                 <b>Mutation type:</b> Enables residue coloring by mutation type.
                 Mutation types and corresponding color codes are as follows:
                 <ul>
                     <li>
-                        <span className='missense_mutation'>Missense Mutations</span>
+                        <span className={styles['missense-mutation']}>Missense Mutations</span>
                     </li>
                     <li>
-                        <span className='trunc_mutation'>Truncating Mutations</span>
-                        (Nonsense, Nonstop, FS del, FS ins)
+                        <span className={styles['trunc-mutation']}>Truncating Mutations</span>
+                        <span> (Nonsense, Nonstop, FS del, FS ins)</span>
                     </li>
                     <li>
-                        <span className='inframe_mutation'>Inframe Mutations</span>
-                        (IF del, IF ins)
+                        <span className={styles['inframe-mutation']}>Inframe Mutations</span>
+                        <span> (IF del, IF ins)</span>
                     </li>
                 </ul>
                 <b>None:</b> Disables coloring of the mutated residues
-                except for manually selected (highlighted) residues.<br />
+                except for manually selected (highlighted) residues. <br />
                 <br />
-                Highlighted residues are colored with <span className='mutation-3d-highlighted'>yellow</span>.
+                Highlighted residues are colored with <span className={styles['highlighted']}>yellow</span>.
             </div>
         );
     }
@@ -147,6 +147,17 @@ export default class StructureViewerPanel extends React.Component<IStructureView
             <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
                 Displays co-crystalized molecules.
                 This option has no effect if the current structure does not contain any co-crystalized bound molecules.
+            </div>
+        );
+    }
+
+    public helpTooltipContent()
+    {
+        return (
+            <div style={{maxWidth: "400px", maxHeight: "200px", overflowY: "auto"}}>
+                <b>Zoom in/out:</b> Press and hold the SHIFT key and the left mouse button, and then move the mouse backward/forward.<br />
+                <b>Pan:</b> Press and hold the CTRL key, click and hold the left mouse button, and then move the mouse in the desired direction.<br />
+                <b>Rotate:</b> Press and hold the left mouse button, and then move the mouse in the desired direction to rotate along the x and y axes.<br />
             </div>
         );
     }
@@ -176,16 +187,18 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             <FormControl
                                 className={styles["default-option-select"]}
                                 componentClass="select"
-                                title='Select 3d protein style'
                                 value={`${this.proteinScheme}`}
                                 onChange={this.handleProteinSchemeChange as React.FormEventHandler<any>}
                             >
-                                <option value={ProteinScheme.CARTOON}
-                                        title='Switch to the Cartoon Scheme'>cartoon</option>
-                                <option value={ProteinScheme.SPACE_FILLING}
-                                        title='Switch to the Space-filling Scheme'>space-filling</option>
-                                <option value={ProteinScheme.TRACE}
-                                        title='Switch to the Trace Scheme'>trace</option>
+                                <option value={ProteinScheme.CARTOON}>
+                                    cartoon
+                                </option>
+                                <option value={ProteinScheme.SPACE_FILLING}>
+                                    space-filling
+                                </option>
+                                <option value={ProteinScheme.TRACE}>
+                                    trace
+                                </option>
                             </FormControl>
                         </div>
                     </div>
@@ -197,33 +210,26 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             <FormControl
                                 className={styles["default-option-select"]}
                                 componentClass="select"
-                                title='Select 3d protein coloring'
                                 value={`${this.proteinColor}`}
                                 onChange={this.handleProteinColorChange as React.FormEventHandler<any>}
                             >
-                                <option
-                                    value={ProteinColor.UNIFORM}
-                                    title='Uniform Color'
-                                >
+                                <option value={ProteinColor.UNIFORM}>
                                     uniform
                                 </option>
                                 <option
                                     value={ProteinColor.SECONDARY_STRUCTURE}
-                                    title='Color by Secondary Structure'
                                     disabled={this.colorBySecondaryStructureDisabled}
                                 >
                                     secondary structure
                                 </option>
                                 <option
                                     value={ProteinColor.NC_RAINBOW}
-                                    title='Color by Rainbow Gradient'
                                     disabled={this.colorByNCRainbowDisabled}
                                 >
                                     N-C rainbow
                                 </option>
                                 <option
                                     value={ProteinColor.ATOM_TYPE}
-                                    title='Color by Atom Type'
                                     disabled={this.colorByAtomTypeDisabled}
                                 >
                                     atom type
@@ -253,26 +259,16 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             <FormControl
                                 className={styles["default-option-select"]}
                                 componentClass="select"
-                                title='Select 3d protein side-chain display'
                                 value={`${this.sideChain}`}
                                 onChange={this.handleSideChainChange as React.FormEventHandler<any>}
                             >
-                                <option
-                                    value={SideChain.ALL}
-                                    title='Display side chain for all mapped residues'
-                                >
+                                <option value={SideChain.ALL}>
                                     all
                                 </option>
-                                <option
-                                    value={SideChain.SELECTED}
-                                    title='Display side chain for highlighted residues only'
-                                >
+                                <option value={SideChain.SELECTED}>
                                     selected
                                 </option>
-                                <option
-                                    value={SideChain.NONE}
-                                    title='Do not display side chains'
-                                >
+                                <option value={SideChain.NONE}>
                                     none
                                 </option>
                             </FormControl>
@@ -280,32 +276,22 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                     </div>
                     <div className="col col-sm-6">
                         <div className="row">
-                            {this.selectionTitle("Color", this.mutationColorTooltipContent())}
+                            {this.selectionTitle("Color", this.mutationColorTooltipContent(), "left")}
                         </div>
                         <div className="row">
                             <FormControl
                                 className={styles["default-option-select"]}
                                 componentClass="select"
-                                title='Select 3d protein mutation color'
                                 value={`${this.mutationColor}`}
                                 onChange={this.handleMutationColorChange as React.FormEventHandler<any>}
                             >
-                                <option
-                                    value={MutationColor.UNIFORM}
-                                    title='Uniform color'
-                                >
+                                <option value={MutationColor.UNIFORM}>
                                     uniform
                                 </option>
-                                <option
-                                    value={MutationColor.MUTATION_TYPE}
-                                    title='Color by mutation type'
-                                >
+                                <option value={MutationColor.MUTATION_TYPE}>
                                     mutation type
                                 </option>
-                                <option
-                                    value={MutationColor.NONE}
-                                    title='Do not color'
-                                >
+                                <option value={MutationColor.NONE}>
                                     none
                                 </option>
                             </FormControl>
@@ -328,30 +314,11 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         PyMOL
                     </button>
                 </div>
-                <div className="col col-sm-8" onClick={this.toggleHelpCollapse}>
+                <div className="col col-sm-8">
                     <span className="pull-right">
-                        <span>how to pan/zoom/rotate?</span>
-                        <If condition={this.isHelpCollapsed}>
-                            <Then>
-                                <i className="fa fa-chevron-down"/>
-                            </Then>
-                            <Else>
-                                <i className="fa fa-chevron-up"/>
-                            </Else>
-                        </If>
+                        how to pan/zoom/rotate? {this.defaultInfoTooltip(this.helpTooltipContent(), "left")}
                     </span>
                 </div>
-            </div>
-        );
-    }
-
-    public helpContent()
-    {
-        return (
-            <div className={`${styles["help-content"]} col col-sm-12`}>
-                <b>Zoom in/out:</b> Press and hold the SHIFT key and the left mouse button, and then move the mouse backward/forward.<br />
-                <b>Pan:</b> Press and hold the CTRL key, click and hold the left mouse button, and then move the mouse in the desired direction.<br />
-                <b>Rotate:</b> Press and hold the left mouse button, and then move the mouse in the desired direction to rotate along the x and y axes.<br />
             </div>
         );
     }
@@ -365,7 +332,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                 </div>
                 <div className="col col-sm-4">
                     <span className="pull-right">
-                        <i className="fa fa-times" onClick={this.handlePanelClose}/>
+                        <i className="fa fa-times" onClick={this.handlePanelClose} />
                     </span>
                 </div>
             </div>
@@ -436,18 +403,13 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                     </div>
                     <div className='row'>
                         {this.topToolbar()}
-                        <div className="row">
-                            <Collapse isOpened={!this.isHelpCollapsed}>
-                                {this.helpContent()}
-                            </Collapse>
+                    </div>
+                    <div className="row">
+                        <div className='col col-sm-6'>
+                            {this.proteinStyleMenu()}
                         </div>
-                        <div className="row">
-                            <div className='col col-sm-6'>
-                                {this.proteinStyleMenu()}
-                            </div>
-                            <div className='col col-sm-6'>
-                                {this.mutationStyleMenu()}
-                            </div>
+                        <div className='col col-sm-6'>
+                            {this.mutationStyleMenu()}
                         </div>
                     </div>
                 </div>

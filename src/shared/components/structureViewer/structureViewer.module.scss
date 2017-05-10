@@ -19,19 +19,56 @@
   box-sizing: content-box;
 }
 
-.default-option-select {
-  height: 28px;
-  padding: 3px 6px;
-  font-size: 13px;
+.main-3d-panel canvas {
+  position: relative !important;
 }
 
-.help-content {
-  background-color: #eeeeee;
-  border: 1px solid #d3d3d3;
-  margin-top: 5px;
-  margin-bottom: 5px;
+.default-option-select {
+  height: 28px !important;
+  padding: 3px 6px !important;
+  font-size: 13px !important;
 }
 
 .main-3d-panel hr {
   margin-bottom: 5px !important;
+}
+
+.alpha-helix {
+  font-weight: bold;
+  color: #FFA500;
+}
+
+.beta-sheet {
+  font-weight: bold;
+  color: #0000FF;
+}
+
+.loop {
+  font-weight: bold;
+  color: #888888;
+}
+
+.highlighted {
+  color: #FFDD00;
+  font-weight: bold;
+}
+
+.uniform-mutation {
+  color: #8A2BE2;
+  font-weight: bold;
+}
+
+.missense-mutation {
+  color: #008000;
+  font-weight: bold;
+}
+
+.trunc-mutation {
+  color: #000000;
+  font-weight: bold;
+}
+
+.inframe-mutation {
+  color: #8B4513;
+  font-weight: bold;
 }

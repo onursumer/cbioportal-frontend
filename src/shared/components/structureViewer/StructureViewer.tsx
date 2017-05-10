@@ -50,9 +50,10 @@ export default class StructureViewer extends React.Component<IStructureViewerPro
     public render()
     {
         return (
-            <div>
-                <div ref={this.divHandler} style={{width: "410px", height: "300px"}}/>
-            </div>
+            <div
+                ref={this.divHandler}
+                style={{height: "300px"}}
+            />
         );
     }
 
