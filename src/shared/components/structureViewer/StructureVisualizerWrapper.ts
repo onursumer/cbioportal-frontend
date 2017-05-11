@@ -4,7 +4,14 @@ import $ from 'jquery';
 // 3Dmol expects "this" to be the global context
 const $3Dmol = require('imports?this=>window!3dmol/build/3Dmol-nojquery.js');
 
+// TODO simplify this legacy data structure
 export type SelectedResiduesToColor = {[color: string]: string[]};
+
+// ideally these two types should be defined in 3Dmol.js lib.
+// manually adding complete style and selector models is quite complicated,
+// so defining them as "any" for now
+export type AtomSelectionSpec = any;
+export type AtomStyleSpec = any;
 
 export enum ProteinScheme {
     CARTOON, SPACE_FILLING, TRACE, BALL_AND_STICK, RIBBON
@@ -44,6 +51,8 @@ export interface IStructureVisualizerProps {
     pdbUri?: string;
     // base color of the whole structure
     baseColor?: string;
+    // background color
+    backgroundColor?: string;
     // colors for special structures
     // structure color takes effect only when corresponding flag is set
     structureColors?: {
@@ -70,6 +79,7 @@ export default class StructureVisualizerWrapper
         pdbUri: "http://www.rcsb.org/pdb/files/",
         proteinScheme: ProteinScheme.CARTOON,
         displayBoundMolecules: true,
+        backgroundColor: "#FFFFFF",
         baseColor: "#DDDDDD",
         structureColors: {
             alphaHelix: "#FFA500",
@@ -91,15 +101,15 @@ export default class StructureVisualizerWrapper
     private _props: IStructureVisualizerProps;
 
     // latest selection
-    private _selected: any;
+    private _selector: AtomSelectionSpec;
 
     // latest style
-    private _style: any;
+    private _style: AtomStyleSpec;
 
     // latest color
     private _color: string;
 
-    public static get PROTEIN_SCHEME_PRESETS(): {[scheme:number]: any}
+    public static get PROTEIN_SCHEME_PRESETS(): {[scheme:number]: AtomStyleSpec}
     {
         const presets:{[scheme:number]: any} = {};
 
@@ -132,7 +142,9 @@ export default class StructureVisualizerWrapper
                 {defaultcolors: $3Dmol.elementColors.rasmol}
             );
 
-            this._3dMolViewer.setBackgroundColor(0xffffff);
+            const backgroundColor = this.formatColor(
+                this._props.backgroundColor || StructureVisualizerWrapper.defaultProps.backgroundColor);
+            this._3dMolViewer.setBackgroundColor(backgroundColor);
             this.loadPdb(pdbId);
         }
     }
@@ -166,18 +178,18 @@ export default class StructureVisualizerWrapper
     
     public selectAll()
     {
-        this._selected = {};
+        this._selector = {};
     }
 
     public selectChain(chainId: string)
     {
-        this._selected = {chain: chainId};
+        this._selector = {chain: chainId};
     }
 
     public setScheme(scheme: ProteinScheme)
     {
         this._style = StructureVisualizerWrapper.PROTEIN_SCHEME_PRESETS[scheme];
-        this.applyStyleForSelected();
+        this.applyStyleForSelector();
     }
 
     public setColor(color: string)
@@ -187,12 +199,12 @@ export default class StructureVisualizerWrapper
 
         if (this._style) {
             // update current style with color information
-            _.each(this._style, (ele:any) => {
+            _.each(this._style, (ele: AtomStyleSpec) => {
                 ele.color = this._color;
             });
         }
 
-        this.applyStyleForSelected();
+        this.applyStyleForSelector();
     }
 
     protected formatColor(color: string)
@@ -205,24 +217,24 @@ export default class StructureVisualizerWrapper
 
     public setTransparency(transparency:number)
     {
-        _.each(this._style, (ele:any) => {
+        _.each(this._style, (ele: AtomStyleSpec) => {
             ele.opacity = (10 - transparency) / 10;
         });
 
-        this.applyStyleForSelected();
+        this.applyStyleForSelector();
     }
 
     public rainbowColor(chainId: string)
     {
-        this._selected = {chain: chainId};
+        this._selector = {chain: chainId};
         this.setColor("spectrum");
     }
 
     public cpkColor(chainId: string)
     {
-        this._selected = {chain: chainId};
+        this._selector = {chain: chainId};
 
-        _.each(this._style, (ele:any) => {
+        _.each(this._style, (ele: AtomStyleSpec) => {
             // remove previous single color
             delete ele.color;
 
@@ -230,24 +242,24 @@ export default class StructureVisualizerWrapper
             ele.colors = $3Dmol.elementColors.defaultColors;
         });
 
-        this.applyStyleForSelected();
+        this.applyStyleForSelector();
     }
 
     public selectAlphaHelix(chainId: string)
     {
-        this._selected = {chain: chainId, ss: "h"};
+        this._selector = {chain: chainId, ss: "h"};
     }
 
     public selectBetaSheet(chainId: string)
     {
-        this._selected = {chain: chainId, ss: "s"};
+        this._selector = {chain: chainId, ss: "s"};
     }
 
     public hideBoundMolecules()
     {
         // since there is no built-in "restrict protein" command,
         // we need to select all non-protein structure...
-        const selected = {
+        const selector = {
             resn: [
                 "asp", "glu", "arg", "lys", "his", "asn", "thr", "cys", "gln", "tyr", "ser",
                 "gly", "ala", "leu", "val", "ile", "met", "trp", "phe", "pro",
@@ -259,7 +271,7 @@ export default class StructureVisualizerWrapper
 
         const style = {sphere: {hidden: true}};
 
-        this._3dMolViewer.setStyle(selected, style);
+        this._3dMolViewer.setStyle(selector, style);
     }
 
     public enableBallAndStick()
@@ -272,7 +284,7 @@ export default class StructureVisualizerWrapper
         style.stick.color = this._color;
 
         // update style of the selection
-        this._3dMolViewer.setStyle(this._selected, style);
+        this._3dMolViewer.setStyle(this._selector, style);
     }
 
     /**
@@ -440,14 +452,14 @@ export default class StructureVisualizerWrapper
 
     public selectResidues(residueCodes: string[], chainId: string)
     {
-        this._selected = {rescode: residueCodes, chain: chainId};
+        this._selector = {rescode: residueCodes, chain: chainId};
     }
 
     public selectSideChains(residueCodes: string[], chainId: string)
     {
         // this is an approximation, we are not able to select side chain atoms,
         // so we are selecting all the atoms at given positions
-        this._selected = {
+        this._selector = {
             rescode: residueCodes,
             chain: chainId/*,
              atom: ["CA"]*/
@@ -479,8 +491,8 @@ export default class StructureVisualizerWrapper
         }
     };
 
-    protected applyStyleForSelected()
+    protected applyStyleForSelector()
     {
-        this._3dMolViewer.setStyle(this._selected, this._style);
+        this._3dMolViewer.setStyle(this._selector, this._style);
     }
 }
