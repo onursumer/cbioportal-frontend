@@ -6,6 +6,9 @@ import {observable, computed} from "mobx";
 import {observer} from "mobx-react";
 import Draggable from 'react-draggable';
 import DefaultTooltip from "shared/components/DefaultTooltip";
+import PdbHeaderCache from "shared/cache/PdbHeaderCache";
+import {generatePdbInfoSummary} from "shared/lib/PdbUtils";
+import {default as TableCellStatusIndicator, TableCellStatus} from "shared/components/TableCellStatus";
 import StructureViewer from "./StructureViewer";
 import {ProteinScheme, ProteinColor, SideChain, MutationColor} from "./StructureVisualizerWrapper";
 
@@ -14,6 +17,7 @@ import styles from "./structureViewer.module.scss";
 export interface IStructureViewerPanelProps {
     pdbId: string;
     chainId: string;
+    pdbHeaderCache?: PdbHeaderCache;
 }
 
 @observer
@@ -343,9 +347,32 @@ export default class StructureViewerPanel extends React.Component<IStructureView
 
     public pdbInfo(pdbId:string, chainId:string)
     {
-        // TODO get info from PDB cache
-        const pdbInfo = null;
-        const molInfo = null;
+        let pdbInfo = null;
+        let moleculeInfo = null;
+
+        if (this.props.pdbHeaderCache)
+        {
+            const cacheData = this.props.pdbHeaderCache.get(pdbId);
+
+            if (cacheData === null) {
+                pdbInfo = <TableCellStatusIndicator status={TableCellStatus.LOADING} />;
+                moleculeInfo = <TableCellStatusIndicator status={TableCellStatus.LOADING} />;
+            }
+            else if (cacheData.status === "error") {
+                pdbInfo = <TableCellStatusIndicator status={TableCellStatus.ERROR} />;
+                moleculeInfo = <TableCellStatusIndicator status={TableCellStatus.ERROR} />;
+            }
+            else if (cacheData.data === null) {
+                pdbInfo = <TableCellStatusIndicator status={TableCellStatus.NA} />;
+                moleculeInfo = <TableCellStatusIndicator status={TableCellStatus.NA} />;
+            }
+            else {
+                const summary = generatePdbInfoSummary(cacheData.data, chainId);
+
+                pdbInfo = summary.pdbInfo;
+                moleculeInfo = summary.moleculeInfo;
+            }
+        }
 
         return (
             <div>
@@ -356,15 +383,15 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             href={`http://www.rcsb.org/pdb/explore/explore.do?structureId=${pdbId}`}
                             target="_blank"
                         >
-                            {pdbId}
+                            <b>{pdbId}</b>
                         </a>
                     </span>
                     <span>: {pdbInfo}</span>
                 </div>
                 <div className="row">
                     <span>Chain </span>
-                    <span>{chainId}</span>
-                    <span>: {molInfo}</span>
+                    <span><b>{chainId}</b></span>
+                    <span>: {moleculeInfo}</span>
                 </div>
             </div>
         );

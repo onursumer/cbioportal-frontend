@@ -50,6 +50,7 @@ export default class Mutations extends React.Component<IMutationsPageProps, {}>
                             pmidCache={this.props.store.pmidCache}
                             cancerTypeCache={this.props.store.cancerTypeCache}
                             mutationCountCache={this.props.store.mutationCountCache}
+                            pdbHeaderCache={this.props.store.pdbHeaderCache}
                             myCancerGenomeData={this.props.store.myCancerGenomeData}
                         />
                     </MSKTab>

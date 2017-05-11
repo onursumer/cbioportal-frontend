@@ -7,6 +7,7 @@ import PmidCache from "shared/cache/PmidCache";
 import CancerTypeCache from "shared/cache/CancerTypeCache";
 import MutationCountCache from "shared/cache/MutationCountCache";
 import {IMyCancerGenomeData} from "shared/model/MyCancerGenome";
+import PdbHeaderCache from "shared/cache/PdbHeaderCache";
 import {MutationMapperStore} from "./MutationMapperStore";
 import ResultsViewMutationTable from "./ResultsViewMutationTable";
 
@@ -18,6 +19,7 @@ export interface IMutationMapperProps {
     oncoKbEvidenceCache?:OncoKbEvidenceCache;
     cancerTypeCache?:CancerTypeCache;
     mutationCountCache?:MutationCountCache;
+    pdbHeaderCache?: PdbHeaderCache;
     pmidCache?:PmidCache;
 }
 
