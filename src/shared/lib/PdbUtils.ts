@@ -1,5 +1,6 @@
 import * as _ from 'lodash';
 import {PdbHeader} from "shared/api/generated/PdbAnnotationAPI";
+import {IPdbPositionRange} from "shared/model/Pdb";
 
 /**
  * Generates a pdb info summary for the given pdb header and the chain id.
@@ -26,4 +27,33 @@ export function generatePdbInfoSummary(pdbHeader:PdbHeader, chainId: string)
     });
 
     return summary;
+}
+
+/**
+ * Converts the given PDB position to residue code(s)
+ */
+export function convertPdbPosToResCode(position: IPdbPositionRange): string[]
+{
+    const residues: string[] = [];
+    const start = position.start.position;
+    const end = position.end.position;
+
+    for (let i=start; i <= end; i++) {
+        residues.push(`${i}`);
+    }
+
+    // TODO this may not be accurate if residues.length > 2
+
+    if (position.start.insertionCode)
+    {
+        residues[0] += "^" + position.start.insertionCode;
+    }
+
+    if (residues.length > 1 &&
+        position.end.insertionCode)
+    {
+        residues[residues.length - 1] += "^" + position.end.insertionCode;
+    }
+
+    return residues;
 }

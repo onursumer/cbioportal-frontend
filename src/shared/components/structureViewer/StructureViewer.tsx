@@ -2,11 +2,13 @@ import * as React from 'react';
 import {observer} from "mobx-react";
 import {observable} from "mobx";
 import {
-    IStructureVisualizerProps, default as StructureVisualizerWrapper
+    IStructureVisualizerProps, default as StructureVisualizerWrapper, IResidueStyle
 } from "./StructureVisualizerWrapper";
 
 export interface IStructureViewerProps extends IStructureVisualizerProps {
-    pdbId:string;
+    pdbId: string;
+    chainId: string;
+    residues: IResidueStyle[];
 }
 
 @observer
@@ -35,7 +37,7 @@ export default class StructureViewer extends React.Component<IStructureViewerPro
     public componentDidMount() {
         if (this._3dMolDiv) {
             this.wrapper = new StructureVisualizerWrapper(this._3dMolDiv, this.props);
-            this.wrapper.init(this.props.pdbId);
+            this.wrapper.init(this.props.pdbId, this.props.chainId, this.props.residues);
             this._pdbId = this.props.pdbId;
         }
     }
@@ -45,11 +47,11 @@ export default class StructureViewer extends React.Component<IStructureViewerPro
             // if pdbId is updated we need to reload the structure
             if (this.props.pdbId !== this._pdbId) {
                 this._pdbId = this.props.pdbId;
-                this.wrapper.loadPdb(this._pdbId, this.props);
+                this.wrapper.loadPdb(this._pdbId, this.props.chainId, this.props.residues, this.props);
             }
             // other updates just require selection/style updates without reloading the structure
             else {
-                this.wrapper.updateViewer(this.props);
+                this.wrapper.updateViewer(this.props.chainId, this.props.residues, this.props);
             }
         }
     }

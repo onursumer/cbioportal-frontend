@@ -1,11 +1,15 @@
 import * as _ from 'lodash';
 import $ from 'jquery';
+import {convertPdbPosToResCode} from "shared/lib/PdbUtils";
+import {IPdbPositionRange} from "shared/model/Pdb";
 
 // 3Dmol expects "this" to be the global context
 const $3Dmol = require('imports?this=>window!3dmol/build/3Dmol-nojquery.js');
 
-// TODO simplify this legacy data structure
-export type SelectedResiduesToColor = {[color: string]: string[]};
+export interface IResidueStyle {
+    positionRange: IPdbPositionRange;
+    color: string;
+}
 
 // ideally these two types should be defined in 3Dmol.js lib.
 // manually adding complete style and selector models is quite complicated,
@@ -40,7 +44,6 @@ export enum MutationColor {
 }
 
 export interface IStructureVisualizerProps {
-    chainId: string;
     proteinScheme: ProteinScheme;
     proteinColor: ProteinColor;
     sideChain: SideChain;
@@ -70,7 +73,6 @@ export interface IStructureVisualizerProps {
     uniformMutationColor?: string;
     // color of the user-selected mutations
     highlightColor?: string;
-    // TODO position and color mapping...
 }
 
 export default class StructureVisualizerWrapper
@@ -99,6 +101,8 @@ export default class StructureVisualizerWrapper
     private _3dMolDiv: HTMLDivElement|undefined;
     private _3dMolViewer: any;
     private _props: IStructureVisualizerProps;
+    private _residues: IResidueStyle[] = [];
+    private _chainId: string;
 
     // latest selection
     private _selector: AtomSelectionSpec;
@@ -134,7 +138,7 @@ export default class StructureVisualizerWrapper
         this.updateViewer = this.updateViewer.bind(this);
     }
 
-    public init(pdbId: string)
+    public init(pdbId: string, chainId: string, residues: IResidueStyle[])
     {
         if (this._3dMolDiv) {
             this._3dMolViewer = $3Dmol.createViewer(
@@ -145,11 +149,14 @@ export default class StructureVisualizerWrapper
             const backgroundColor = this.formatColor(
                 this._props.backgroundColor || StructureVisualizerWrapper.defaultProps.backgroundColor);
             this._3dMolViewer.setBackgroundColor(backgroundColor);
-            this.loadPdb(pdbId);
+            this.loadPdb(pdbId, chainId, residues);
         }
     }
 
-    public loadPdb(pdbId: string, props:IStructureVisualizerProps = this._props)
+    public loadPdb(pdbId: string,
+                   chainId: string,
+                   residues: IResidueStyle[] = this._residues,
+                   props:IStructureVisualizerProps = this._props)
     {
         const options = {
             doAssembly: true,
@@ -158,24 +165,34 @@ export default class StructureVisualizerWrapper
         };
 
         if (this._3dMolViewer) {
+            // clear previous content
+            this._3dMolViewer.clear();
+
             $3Dmol.download(`pdb:${pdbId.toUpperCase()}`, this._3dMolViewer, options, () => {
-                this.updateViewer(props);
+                this.updateViewer(chainId, residues, props);
             });
         }
     }
 
-    public updateViewer(props:IStructureVisualizerProps = this._props)
+    public updateViewer(chainId:string,
+                        residues: IResidueStyle[] = this._residues,
+                        props:IStructureVisualizerProps = this._props)
     {
         this._props = props;
+        this._chainId = chainId;
+        this._residues = residues;
 
-        // TODO selection...
-        const selection = {};
-
-        this.updateVisualStyle(selection, props.chainId, props);
+        this.updateVisualStyle(residues, chainId, props);
 
         this._3dMolViewer.render();
     }
-    
+
+    public updateResidues(residues: IResidueStyle[])
+    {
+        this._residues = residues;
+        this.updateViewer(this._chainId, residues);
+    }
+
     public selectAll()
     {
         this._selector = {};
@@ -287,10 +304,54 @@ export default class StructureVisualizerWrapper
         this._3dMolViewer.setStyle(this._selector, style);
     }
 
+    protected updateResidueStyle(residues: IResidueStyle[],
+                                 chainId: string,
+                                 props: IStructureVisualizerProps = this._props)
+    {
+        const defaultProps = StructureVisualizerWrapper.defaultProps;
+
+        // group residues by color
+        const grouped:{[color:string]: IResidueStyle[]} = _.groupBy(residues, 'color');
+
+        // process residues
+        _.each(_.keys(grouped), (color:string) => {
+
+            const positions = grouped[color].map((residue:IResidueStyle) => {
+                return residue.positionRange;
+            });
+
+            const resCodes = this.convertPositionsToResCode(positions);
+
+            this.selectResidues(resCodes, chainId);
+
+            // color each residue with a mapped color (this is to sync with diagram colors)
+
+            // use the actual mapped color
+            if (props.mutationColor === MutationColor.MUTATION_TYPE)
+            {
+                // color with corresponding mutation type color
+                this.setColor(color);
+            }
+            // use a uniform color
+            else if (props.mutationColor === MutationColor.UNIFORM)
+            {
+                // color with a uniform mutation color
+                this.setColor(props.uniformMutationColor || defaultProps.uniformMutationColor);
+            }
+            // else: NONE (no need to color anything)
+
+            // show/hide side chains
+            this.updateSideChains(chainId,
+                resCodes,
+                props.sideChain === SideChain.ALL,
+                props);
+        });
+    }
+
     /**
      * Updates the visual style (scheme, coloring, selection, etc.)
      */
-    public updateVisualStyle(selection: SelectedResiduesToColor,
+    public updateVisualStyle(residues: IResidueStyle[],
                              chainId: string,
                              props: IStructureVisualizerProps = this._props)
     {
@@ -333,72 +394,11 @@ export default class StructureVisualizerWrapper
             this.rainbowColor(chainId);
         }
 
-        // TODO simplify this, get rid of the map, just get an array of <position, color> pairs
-        // process mapped residues
-        _.each(_.keys(selection), (color:string) => {
-            // select residues affected by mutations
-            this.selectResidues(selection[color], chainId);
-
-            // color each residue with a mapped color (this is to sync with diagram colors)
-
-            // use the actual mapped color
-            if (props.mutationColor === MutationColor.MUTATION_TYPE)
-            {
-                // color with corresponding mutation type color
-                this.setColor(color);
-            }
-            // use a uniform color
-            else if (props.mutationColor === MutationColor.UNIFORM)
-            {
-                // color with a uniform mutation color
-                this.setColor(props.uniformMutationColor || defaultProps.uniformMutationColor);
-            }
-            // else: NONE (no need to color anything)
-
-            // show/hide side chains
-            this.updateSideChains(chainId,
-                selection[color],
-                props.sideChain === SideChain.ALL,
-                props);
-        });
+        this.updateResidueStyle(residues, chainId, props);
 
         if (!props.displayBoundMolecules) {
             this.hideBoundMolecules();
         }
-    }
-
-    /**
-     * Converts the given PDB position to residue code(s) for 3Dmol.js.
-     */
-    // TODO define a proper type for position
-    public convertPdbPosToResCode(position: any): string[]
-    {
-        const residues:string[] = [];
-        const startPdbPos = position.start.pdbPos || position.start.pdbPosition;
-        const endPdbPos = position.end.pdbPos || position.end.pdbPosition;
-
-        const start = parseInt(startPdbPos, 10);
-        const end = parseInt(endPdbPos, 10);
-
-        for (let i=start; i <= end; i++)
-        {
-            residues.push(`${i}`);
-        }
-
-        // TODO this may not be accurate if residues.length > 2
-
-        if (position.start.insertion)
-        {
-            residues[0] += "^" + position.start.insertion;
-        }
-
-        if (residues.length > 1 &&
-            position.end.insertion)
-        {
-            residues[residues.length - 1] += "^" + position.end.insertion;
-        }
-
-        return residues;
     }
 
     /**
@@ -423,12 +423,12 @@ export default class StructureVisualizerWrapper
      * Highlights the provided PDB residues.
      */
     public highlightResidues(chainId: string,
-                             positions: any[],
+                             positions: IPdbPositionRange[],
                              color: string,
                              props: IStructureVisualizerProps = this._props)
     {
         // highlight the selected residues
-        if (!_.isEmpty(positions))
+        if (positions.length > 0)
         {
             // convert positions to residue codes
             const residueCodes = this.convertPositionsToResCode(positions);
@@ -438,13 +438,14 @@ export default class StructureVisualizerWrapper
 
     }
 
-    protected convertPositionsToResCode(positions: any[])
+    protected convertPositionsToResCode(positions: IPdbPositionRange[])
     {
-        const residueCodes:string[] = [];
+        let residueCodes: string[] = [];
 
         // convert positions to script positions
-        _.each(positions, function(position: any) {
-            residueCodes.push(this.convertPdbPosToResCode(position));
+        positions.forEach((range: IPdbPositionRange) => {
+            //residueCodes.push(convertPdbPosToResCode(range));
+            residueCodes = residueCodes.concat(convertPdbPosToResCode(range));
         });
 
         return residueCodes;
@@ -452,23 +453,29 @@ export default class StructureVisualizerWrapper
 
     public selectResidues(residueCodes: string[], chainId: string)
     {
-        this._selector = {rescode: residueCodes, chain: chainId};
+        this._selector = {
+            // TODO rescode: residueCodes does not work anymore for some reason
+            resi: residueCodes,
+            chain: chainId
+        };
     }
 
     public selectSideChains(residueCodes: string[], chainId: string)
     {
-        // this is an approximation, we are not able to select side chain atoms,
+        // we are not able to select side chain atoms...
+        // this._selector = {
+        //     resi: residueCodes,
+        //     chain: chainId,
+        //     atom: ["CA"]
+        // };
+
         // so we are selecting all the atoms at given positions
-        this._selector = {
-            rescode: residueCodes,
-            chain: chainId/*,
-             atom: ["CA"]*/
-        };
+        this.selectResidues(residueCodes, chainId);
     }
 
     /**
-     * Generates the script to show/hide the side chain for the given positions.
-     * Positions can be in the form of "666" or "666:C", both are fine.
+     * Show/hide the side chain for the given residues.
+     * Residue codes can be in the form of "666" or "666:C", both are fine.
      */
     public updateSideChains(chainId: string,
                             residueCodes: string[],

@@ -10,13 +10,14 @@ import PdbHeaderCache from "shared/cache/PdbHeaderCache";
 import {generatePdbInfoSummary} from "shared/lib/PdbUtils";
 import {default as TableCellStatusIndicator, TableCellStatus} from "shared/components/TableCellStatus";
 import StructureViewer from "./StructureViewer";
-import {ProteinScheme, ProteinColor, SideChain, MutationColor} from "./StructureVisualizerWrapper";
+import {ProteinScheme, ProteinColor, SideChain, MutationColor, IResidueStyle} from "./StructureVisualizerWrapper";
 
 import styles from "./structureViewer.module.scss";
 
 export interface IStructureViewerPanelProps {
     pdbId: string;
     chainId: string;
+    residues: IResidueStyle[];
     pdbHeaderCache?: PdbHeaderCache;
 }
 
@@ -428,6 +429,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             mutationColor={this.mutationColor}
                             pdbId={this.props.pdbId}
                             chainId={this.props.chainId}
+                            residues={this.props.residues}
                         />
                     </div>
                     <div className='row'>
