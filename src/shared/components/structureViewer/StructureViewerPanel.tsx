@@ -1,10 +1,11 @@
 import * as React from 'react';
-import {FormControl, Checkbox} from 'react-bootstrap';
+import {FormControl, Checkbox, Button, ButtonGroup} from 'react-bootstrap';
 import {If, Else, Then} from 'react-if';
 import {ThreeBounce} from 'better-react-spinkit';
 import {observable, computed} from "mobx";
 import {observer} from "mobx-react";
 import Draggable from 'react-draggable';
+import classnames from 'classnames';
 import DefaultTooltip from "shared/components/DefaultTooltip";
 import PdbHeaderCache from "shared/cache/PdbHeaderCache";
 import {IMobXApplicationDataStore} from "shared/lib/IMobXApplicationDataStore";
@@ -22,31 +23,30 @@ export interface IStructureViewerPanelProps {
     residues: IResidueSpec[];
     dataStore: IMobXApplicationDataStore<Mutation[]>;
     pdbHeaderCache?: PdbHeaderCache;
+    onClose?: () => void;
 }
 
 @observer
 export default class StructureViewerPanel extends React.Component<IStructureViewerPanelProps, {}> {
 
-    @observable protected isHelpCollapsed:boolean = true;
+    @observable protected isCollapsed:boolean = false;
     @observable protected proteinScheme:ProteinScheme = ProteinScheme.CARTOON;
     @observable protected proteinColor:ProteinColor = ProteinColor.UNIFORM;
     @observable protected sideChain:SideChain = SideChain.SELECTED;
     @observable protected mutationColor:MutationColor = MutationColor.MUTATION_TYPE;
     @observable protected displayBoundMolecules:boolean = true;
-    @observable protected isClosed:boolean = false;
     @observable protected residueWarning: string = "";
 
     constructor() {
         super();
 
-        this.toggleHelpCollapse = this.toggleHelpCollapse.bind(this);
+        this.toggleCollapse = this.toggleCollapse.bind(this);
         this.handleProteinSchemeChange = this.handleProteinSchemeChange.bind(this);
         this.handleProteinColorChange = this.handleProteinColorChange.bind(this);
         this.handleSideChainChange = this.handleSideChainChange.bind(this);
         this.handleMutationColorChange = this.handleMutationColorChange.bind(this);
         this.handleBoundMoleculeChange = this.handleBoundMoleculeChange.bind(this);
         this.handlePyMolDownload = this.handlePyMolDownload.bind(this);
-        this.handlePanelClose = this.handlePanelClose.bind(this);
     }
 
     public selectionTitle(text: string, tooltip?: JSX.Element, placement:string = "top")
@@ -179,7 +179,11 @@ export default class StructureViewerPanel extends React.Component<IStructureView
             <span>
                 <div className='row text-center'>
                     <span>Protein Style</span>
-                    <hr />
+                </div>
+                <div className='row'>
+                    <div className='col col-sm-10 col-sm-offset-1'>
+                        <hr />
+                    </div>
                 </div>
                 <div className='row'>
                     <Checkbox
@@ -259,7 +263,11 @@ export default class StructureViewerPanel extends React.Component<IStructureView
             <span>
                 <div className='row text-center'>
                     <span>Mutation Style</span>
-                    <hr />
+                </div>
+                <div className='row'>
+                    <div className='col col-sm-10 col-sm-offset-1'>
+                        <hr />
+                    </div>
                 </div>
                 <div className="row">
                     <div className="col col-sm-6">
@@ -317,15 +325,16 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <div className='row'>
-                <div className="col col-sm-4">
-                    <button
-                        className='btn btn-default btn-sm'
-                        onClick={this.handlePyMolDownload}
-                    >
-                        PyMOL
-                    </button>
+                <div className="col col-sm-6">
+                    <ButtonGroup>
+                        <DefaultTooltip overlay={<span>Download PyMol script</span>} placement="top">
+                            <Button className="btn-sm" onClick={this.handlePyMolDownload}>
+                                <i className='fa fa-cloud-download'/> PyMol
+                            </Button>
+                        </DefaultTooltip>
+                    </ButtonGroup>
                 </div>
-                <div className="col col-sm-8">
+                <div className="col col-sm-6">
                     <span className="pull-right">
                         how to pan/zoom/rotate? {this.defaultInfoTooltip(this.helpTooltipContent(), "left")}
                     </span>
@@ -338,12 +347,21 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     {
         return (
             <div className='row'>
-                <div className='col col-sm-8'>
+                <div className='col col-sm-10'>
                     <span>3D Structure</span>
                 </div>
-                <div className="col col-sm-4">
+                <div className="col col-sm-2">
                     <span className="pull-right">
-                        <i className="fa fa-times" onClick={this.handlePanelClose} />
+                        <i
+                            className="fa fa-minus-circle"
+                            onClick={this.toggleCollapse}
+                            style={{marginRight: "5px", cursor: "pointer"}}
+                        />
+                        <i
+                            className="fa fa-times-circle"
+                            onClick={this.props.onClose}
+                            style={{cursor: "pointer"}}
+                        />
                     </span>
                 </div>
             </div>
@@ -403,18 +421,14 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     }
 
     public render() {
-        if (this.isClosed) {
-            return null;
-        }
-
         return (
             <Draggable
                 handle=".structure-viewer-header"
             >
-                <div className={styles["main-3d-panel"]}>
+                <div className={classnames(styles["main-3d-panel"], {[styles["collapsed-panel"]]: this.isCollapsed})}>
                     <div className="structure-viewer-header row">
                         {this.header()}
-                        <hr/>
+                        <hr style={{borderTopColor: "#BBBBBB"}} />
                     </div>
                     <div className="row">
                         {this.pdbInfo(this.props.pdbId, this.props.chainId)}
@@ -425,6 +439,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                         </span>
                     </If>
                     <div className={`${styles["vis-container"]} row`}>
+                        <hr />
                         <StructureViewer
                             displayBoundMolecules={this.displayBoundMolecules}
                             proteinScheme={this.proteinScheme}
@@ -435,9 +450,11 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                             chainId={this.props.chainId}
                             residues={this.props.residues}
                         />
+                        <hr />
                     </div>
                     <div className='row'>
                         {this.topToolbar()}
+                        <hr />
                     </div>
                     <div className="row">
                         <div className='col col-sm-6'>
@@ -452,8 +469,8 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         );
     }
 
-    private toggleHelpCollapse() {
-        this.isHelpCollapsed = !this.isHelpCollapsed;
+    private toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
     }
 
     private handleProteinSchemeChange(evt:React.FormEvent<HTMLSelectElement>) {
@@ -491,10 +508,6 @@ export default class StructureViewerPanel extends React.Component<IStructureView
 
     private handlePyMolDownload() {
         // TODO generate a PyMol script for the current state of the viewer
-    }
-
-    private handlePanelClose() {
-        this.isClosed = true;
     }
 
     @computed get colorBySecondaryStructureDisabled()

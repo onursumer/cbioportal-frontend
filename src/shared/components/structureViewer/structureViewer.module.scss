@@ -1,10 +1,8 @@
 .main-3d-panel {
   width: 420px;
-  //height: 400px;
-  //font-family: verdana, arial, sans-serif;
-  //font-size: 12px;
   //position: fixed;
   float: right;
+  overflow: hidden;
   //right: 0;
   //top: 0;
   //z-index: 100;
@@ -17,6 +15,10 @@
   -webkit-border-radius: 15px;
   /* fix for bootstrap 3 */
   box-sizing: content-box;
+}
+
+.collapsed-panel {
+  height: 8px;
 }
 
 .main-3d-panel canvas {
@@ -32,11 +34,6 @@
 
 .main-3d-panel hr {
   margin-bottom: 5px !important;
-}
-
-.vis-container {
-  margin-top: 5px;
-  margin-bottom: 5px;
 }
 
 .alpha-helix {
