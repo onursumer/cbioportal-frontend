@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import $ from 'jquery';
-import {convertPdbPosToResCode} from "shared/lib/PdbUtils";
+import {convertPdbPosToResCode, convertPdbPosToResAndInsCode} from "shared/lib/PdbUtils";
 import {IPdbPositionRange} from "shared/model/Pdb";
 
 // 3Dmol expects "this" to be the global context
@@ -9,6 +9,7 @@ const $3Dmol = require('imports?this=>window!3dmol/build/3Dmol-nojquery.js');
 export interface IResidueSpec {
     positionRange: IPdbPositionRange;
     color: string;
+    highlighted?: boolean;
 }
 
 // ideally these two types should be defined in 3Dmol.js lib.
@@ -304,47 +305,44 @@ export default class StructureVisualizerWrapper
         this._3dMolViewer.setStyle(this._selector, style);
     }
 
-    protected updateResidueStyle(residues: IResidueSpec[],
-                                 chainId: string,
-                                 props: IStructureVisualizerProps = this._props)
+    public updateResidueStyle(residues: IResidueSpec[],
+                              chainId: string,
+                              props: IStructureVisualizerProps = this._props)
     {
         const defaultProps = StructureVisualizerWrapper.defaultProps;
 
-        // group residues by color
-        const grouped:{[color:string]: IResidueSpec[]} = _.groupBy(residues, 'color');
+        residues.forEach((residue:IResidueSpec) => {
+            // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
+            //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
+            const residueSelectors = convertPdbPosToResAndInsCode(residue.positionRange);
 
-        // process residues
-        _.each(_.keys(grouped), (color:string) => {
+            residueSelectors.forEach((residueSelector) => {
+                this.selectResidue(residueSelector, chainId);
 
-            const positions = grouped[color].map((residue:IResidueSpec) => {
-                return residue.positionRange;
-            });
+                // use the highlight color if highlighted (always color highlighted residues)
+                if (residue.highlighted) {
+                    this.setColor(this._props.highlightColor || StructureVisualizerWrapper.defaultProps.highlightColor);
+                }
+                // use the provided color
+                else if (props.mutationColor === MutationColor.MUTATION_TYPE) {
+                    this.setColor(residue.color);
+                }
+                // use a uniform color
+                else if (props.mutationColor === MutationColor.UNIFORM) {
+                    // color with a uniform mutation color
+                    this.setColor(props.uniformMutationColor || defaultProps.uniformMutationColor);
+                }
+                // else: NONE (no need to color)
 
-            const resCodes = this.convertPositionsToResCode(positions);
+                const displaySideChain = props.sideChain === SideChain.ALL ||
+                    (residue.highlighted === true && props.sideChain === SideChain.SELECTED);
 
-            this.selectResidues(resCodes, chainId);
-
-            // color each residue with a mapped color (this is to sync with diagram colors)
-
-            // use the actual mapped color
-            if (props.mutationColor === MutationColor.MUTATION_TYPE)
-            {
-                // color with corresponding mutation type color
-                this.setColor(color);
-            }
-            // use a uniform color
-            else if (props.mutationColor === MutationColor.UNIFORM)
-            {
-                // color with a uniform mutation color
-                this.setColor(props.uniformMutationColor || defaultProps.uniformMutationColor);
-            }
-            // else: NONE (no need to color anything)
-
-            // show/hide side chains
-            this.updateSideChains(chainId,
-                resCodes,
-                props.sideChain === SideChain.ALL,
-                props);
+                // show/hide side chains
+                this.updateSideChains(chainId,
+                    residueSelector,
+                    displaySideChain,
+                    props);
+                });
         });
     }
 
@@ -401,50 +399,12 @@ export default class StructureVisualizerWrapper
         }
     }
 
-    /**
-     * Highlights provided residues.
-     */
-    public highlight(chainId: string,
-                     residueCodes: string[],
-                     color: string,
-                     props: IStructureVisualizerProps = this._props)
-    {
-        // add highlight color
-        this.selectResidues(residueCodes, chainId);
-        this.setColor(color);
-
-        const displaySideChain = props.sideChain !== SideChain.NONE;
-
-        // update side chains (they need to be highlighted too)
-        this.updateSideChains(chainId, residueCodes, displaySideChain, props);
-    }
-
-    /**
-     * Highlights the provided PDB residues.
-     */
-    public highlightResidues(chainId: string,
-                             positions: IPdbPositionRange[],
-                             color: string,
-                             props: IStructureVisualizerProps = this._props)
-    {
-        // highlight the selected residues
-        if (positions.length > 0)
-        {
-            // convert positions to residue codes
-            const residueCodes = this.convertPositionsToResCode(positions);
-
-            this.highlight(chainId, residueCodes, color, props);
-        }
-
-    }
-
     protected convertPositionsToResCode(positions: IPdbPositionRange[])
     {
         let residueCodes: string[] = [];
 
         // convert positions to script positions
         positions.forEach((range: IPdbPositionRange) => {
-            //residueCodes.push(convertPdbPosToResCode(range));
             residueCodes = residueCodes.concat(convertPdbPosToResCode(range));
         });
 
@@ -454,23 +414,29 @@ export default class StructureVisualizerWrapper
     public selectResidues(residueCodes: string[], chainId: string)
     {
         this._selector = {
-            // TODO rescode: residueCodes does not work anymore for some reason
-            resi: residueCodes,
+            rescode: residueCodes,
             chain: chainId
         };
     }
 
-    public selectSideChains(residueCodes: string[], chainId: string)
+    public selectResidue(residueSelector: {resi: number, icode?:string}, chainId: string)
+    {
+        this._selector = {
+            chain: chainId,
+            ...residueSelector
+        };
+    }
+
+    public selectSideChains(residueSelector: {resi: number, icode?:string}, chainId: string)
     {
         // we are not able to select side chain atoms...
         // this._selector = {
-        //     resi: residueCodes,
-        //     chain: chainId,
+        //     ...,
         //     atom: ["CA"]
         // };
 
         // so we are selecting all the atoms at given positions
-        this.selectResidues(residueCodes, chainId);
+        this.selectResidue(residueSelector, chainId);
     }
 
     /**
@@ -478,7 +444,7 @@ export default class StructureVisualizerWrapper
      * Residue codes can be in the form of "666" or "666:C", both are fine.
      */
     public updateSideChains(chainId: string,
-                            residueCodes: string[],
+                            residueSelector: {resi: number, icode?:string},
                             displaySideChain: boolean,
                             props: IStructureVisualizerProps = this._props)
     {
@@ -486,14 +452,12 @@ export default class StructureVisualizerWrapper
         if (!(props.proteinScheme === ProteinScheme.SPACE_FILLING))
         {
             // select the corresponding side chain and also the CA atom on the backbone
-            this.selectSideChains(residueCodes, chainId);
+            this.selectSideChains(residueSelector, chainId);
 
             if (displaySideChain)
             {
                 // display the side chain with ball&stick style
                 this.enableBallAndStick();
-
-                // TODO also color side chain wrt atom type (CPK)?
             }
         }
     };
