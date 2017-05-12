@@ -7,6 +7,8 @@ import {observer} from "mobx-react";
 import Draggable from 'react-draggable';
 import DefaultTooltip from "shared/components/DefaultTooltip";
 import PdbHeaderCache from "shared/cache/PdbHeaderCache";
+import {IMobXApplicationDataStore} from "shared/lib/IMobXApplicationDataStore";
+import {Mutation} from "shared/api/generated/CBioPortalAPI";
 import {generatePdbInfoSummary} from "shared/lib/PdbUtils";
 import {default as TableCellStatusIndicator, TableCellStatus} from "shared/components/TableCellStatus";
 import StructureViewer from "./StructureViewer";
@@ -18,6 +20,7 @@ export interface IStructureViewerPanelProps {
     pdbId: string;
     chainId: string;
     residues: IResidueStyle[];
+    dataStore: IMobXApplicationDataStore<Mutation[]>;
     pdbHeaderCache?: PdbHeaderCache;
 }
 
@@ -31,6 +34,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
     @observable protected mutationColor:MutationColor = MutationColor.MUTATION_TYPE;
     @observable protected displayBoundMolecules:boolean = true;
     @observable protected isClosed:boolean = false;
+    @observable protected residueWarning: string = "";
 
     constructor() {
         super();
@@ -415,12 +419,12 @@ export default class StructureViewerPanel extends React.Component<IStructureView
                     <div className="row">
                         {this.pdbInfo(this.props.pdbId, this.props.chainId)}
                     </div>
-                    <If condition={false}>
-                        <span>
-                            Selected location(s) cannot be mapped onto this structure
+                    <If condition={this.residueWarning.length > 0}>
+                        <span className="text-danger">
+                            {this.residueWarning}
                         </span>
                     </If>
-                    <div className='mutation-3d-vis-container row'>
+                    <div className={`${styles["vis-container"]} row`}>
                         <StructureViewer
                             displayBoundMolecules={this.displayBoundMolecules}
                             proteinScheme={this.proteinScheme}
