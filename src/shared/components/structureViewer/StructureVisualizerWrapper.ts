@@ -6,7 +6,7 @@ import {IPdbPositionRange} from "shared/model/Pdb";
 // 3Dmol expects "this" to be the global context
 const $3Dmol = require('imports?this=>window!3dmol/build/3Dmol-nojquery.js');
 
-export interface IResidueStyle {
+export interface IResidueSpec {
     positionRange: IPdbPositionRange;
     color: string;
 }
@@ -101,7 +101,7 @@ export default class StructureVisualizerWrapper
     private _3dMolDiv: HTMLDivElement|undefined;
     private _3dMolViewer: any;
     private _props: IStructureVisualizerProps;
-    private _residues: IResidueStyle[] = [];
+    private _residues: IResidueSpec[] = [];
     private _chainId: string;
 
     // latest selection
@@ -138,7 +138,7 @@ export default class StructureVisualizerWrapper
         this.updateViewer = this.updateViewer.bind(this);
     }
 
-    public init(pdbId: string, chainId: string, residues: IResidueStyle[])
+    public init(pdbId: string, chainId: string, residues: IResidueSpec[])
     {
         if (this._3dMolDiv) {
             this._3dMolViewer = $3Dmol.createViewer(
@@ -155,7 +155,7 @@ export default class StructureVisualizerWrapper
 
     public loadPdb(pdbId: string,
                    chainId: string,
-                   residues: IResidueStyle[] = this._residues,
+                   residues: IResidueSpec[] = this._residues,
                    props:IStructureVisualizerProps = this._props)
     {
         const options = {
@@ -175,7 +175,7 @@ export default class StructureVisualizerWrapper
     }
 
     public updateViewer(chainId:string,
-                        residues: IResidueStyle[] = this._residues,
+                        residues: IResidueSpec[] = this._residues,
                         props:IStructureVisualizerProps = this._props)
     {
         this._props = props;
@@ -187,7 +187,7 @@ export default class StructureVisualizerWrapper
         this._3dMolViewer.render();
     }
 
-    public updateResidues(residues: IResidueStyle[])
+    public updateResidues(residues: IResidueSpec[])
     {
         this._residues = residues;
         this.updateViewer(this._chainId, residues);
@@ -304,19 +304,19 @@ export default class StructureVisualizerWrapper
         this._3dMolViewer.setStyle(this._selector, style);
     }
 
-    protected updateResidueStyle(residues: IResidueStyle[],
+    protected updateResidueStyle(residues: IResidueSpec[],
                                  chainId: string,
                                  props: IStructureVisualizerProps = this._props)
     {
         const defaultProps = StructureVisualizerWrapper.defaultProps;
 
         // group residues by color
-        const grouped:{[color:string]: IResidueStyle[]} = _.groupBy(residues, 'color');
+        const grouped:{[color:string]: IResidueSpec[]} = _.groupBy(residues, 'color');
 
         // process residues
         _.each(_.keys(grouped), (color:string) => {
 
-            const positions = grouped[color].map((residue:IResidueStyle) => {
+            const positions = grouped[color].map((residue:IResidueSpec) => {
                 return residue.positionRange;
             });
 
@@ -351,7 +351,7 @@ export default class StructureVisualizerWrapper
     /**
      * Updates the visual style (scheme, coloring, selection, etc.)
      */
-    public updateVisualStyle(residues: IResidueStyle[],
+    public updateVisualStyle(residues: IResidueSpec[],
                              chainId: string,
                              props: IStructureVisualizerProps = this._props)
     {

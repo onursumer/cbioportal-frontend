@@ -2,13 +2,13 @@ import * as React from 'react';
 import {observer} from "mobx-react";
 import {observable} from "mobx";
 import {
-    IStructureVisualizerProps, default as StructureVisualizerWrapper, IResidueStyle
+    IStructureVisualizerProps, default as StructureVisualizerWrapper, IResidueSpec
 } from "./StructureVisualizerWrapper";
 
 export interface IStructureViewerProps extends IStructureVisualizerProps {
     pdbId: string;
     chainId: string;
-    residues: IResidueStyle[];
+    residues: IResidueSpec[];
 }
 
 @observer

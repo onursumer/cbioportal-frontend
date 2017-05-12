@@ -12,14 +12,14 @@ import {Mutation} from "shared/api/generated/CBioPortalAPI";
 import {generatePdbInfoSummary} from "shared/lib/PdbUtils";
 import {default as TableCellStatusIndicator, TableCellStatus} from "shared/components/TableCellStatus";
 import StructureViewer from "./StructureViewer";
-import {ProteinScheme, ProteinColor, SideChain, MutationColor, IResidueStyle} from "./StructureVisualizerWrapper";
+import {ProteinScheme, ProteinColor, SideChain, MutationColor, IResidueSpec} from "./StructureVisualizerWrapper";
 
 import styles from "./structureViewer.module.scss";
 
 export interface IStructureViewerPanelProps {
     pdbId: string;
     chainId: string;
-    residues: IResidueStyle[];
+    residues: IResidueSpec[];
     dataStore: IMobXApplicationDataStore<Mutation[]>;
     pdbHeaderCache?: PdbHeaderCache;
 }
@@ -380,7 +380,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         }
 
         return (
-            <div>
+            <div className="col col-sm-12">
                 <div className="row">
                     <span>PDB </span>
                     <span>
