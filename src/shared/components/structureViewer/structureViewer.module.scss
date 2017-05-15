@@ -1,11 +1,11 @@
 .main-3d-panel {
   width: 420px;
-  //position: fixed;
+  position: absolute;
   float: right;
   overflow: hidden;
-  //right: 0;
+  right: 0;
   //top: 0;
-  //z-index: 100;
+  z-index: 100;
   border-style: outset;
   border-color: #BABDB6;
   border-radius: 15px;

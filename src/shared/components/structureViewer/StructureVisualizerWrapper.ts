@@ -139,7 +139,7 @@ export default class StructureVisualizerWrapper
         this.updateViewer = this.updateViewer.bind(this);
     }
 
-    public init(pdbId: string, chainId: string, residues: IResidueSpec[])
+    public init(pdbId: string, chainId: string, residues: IResidueSpec[] = this._residues)
     {
         if (this._3dMolDiv) {
             this._3dMolViewer = $3Dmol.createViewer(

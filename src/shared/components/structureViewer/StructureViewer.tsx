@@ -8,7 +8,7 @@ import {
 export interface IStructureViewerProps extends IStructureVisualizerProps {
     pdbId: string;
     chainId: string;
-    residues: IResidueSpec[];
+    residues?: IResidueSpec[];
 }
 
 @observer

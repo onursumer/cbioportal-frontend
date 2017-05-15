@@ -20,8 +20,8 @@ import styles from "./structureViewer.module.scss";
 export interface IStructureViewerPanelProps {
     pdbId: string;
     chainId: string;
-    residues: IResidueSpec[];
-    dataStore: IMobXApplicationDataStore<Mutation[]>;
+    residues?: IResidueSpec[];
+    dataStore?: IMobXApplicationDataStore<Mutation[]>;
     pdbHeaderCache?: PdbHeaderCache;
     onClose?: () => void;
 }
