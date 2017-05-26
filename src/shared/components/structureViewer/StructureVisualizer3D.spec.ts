@@ -49,7 +49,7 @@ describe('StructureVisualizer3D', () => {
 
         // reset to defaults
         props = {
-            pdbUri: "http://www.rcsb.org/pdb/files/",
+            pdbUri: "https://files.rcsb.org/view/",
             proteinScheme: ProteinScheme.CARTOON,
             displayBoundMolecules: true,
             backgroundColor: "#FFFFFF",

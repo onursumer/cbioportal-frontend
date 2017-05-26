@@ -49,6 +49,8 @@ export default class StructureVisualizer3D extends StructureVisualizer
     private _residues: IResidueSpec[] = [];
     private _chainId: string;
 
+    private _loadingPdb: boolean = false;
+
     public static get PROTEIN_SCHEME_PRESETS(): {[scheme:number]: AtomStyleSpec}
     {
         const presets:{[scheme:number]: any} = {};
@@ -123,12 +125,27 @@ export default class StructureVisualizer3D extends StructureVisualizer
             // frames: true
         };
 
+        // update global references
+        this._props = props;
+        this._chainId = chainId;
+        this._residues = residues;
+
         if (this._3dMolViewer) {
             // clear previous content
             this._3dMolViewer.clear();
 
+            // update load state (mark as loading)
+            this._loadingPdb = true;
+
+            // TODO handle download error
+            // init download
             this._3dMol.download(`pdb:${pdbId.toUpperCase()}`, this._3dMolViewer, options, () => {
-                this.updateViewer(chainId, residues, props);
+                // update load state (mark as finished)
+                this._loadingPdb = false;
+
+                // use global references instead of the local ones,
+                // since they might be updated before the pdb download ends
+                this.updateViewer(this._chainId, this._residues, this._props);
             });
         }
     }
@@ -137,13 +154,17 @@ export default class StructureVisualizer3D extends StructureVisualizer
                         residues: IResidueSpec[] = this._residues,
                         props:IStructureVisualizerProps = this._props)
     {
+        // update global references
         this._props = props;
         this._chainId = chainId;
         this._residues = residues;
 
-        this.updateVisualStyle(residues, chainId, props);
-
-        this._3dMolViewer.render();
+        // do not update or render if pdb is still loading,
+        // pdb load callback will take care of the update once the load ends
+        if (!this._loadingPdb) {
+            this.updateVisualStyle(residues, chainId, props);
+            this._3dMolViewer.render();
+        }
     }
 
     public updateResidues(residues: IResidueSpec[])

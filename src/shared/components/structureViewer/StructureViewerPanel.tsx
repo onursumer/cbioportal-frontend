@@ -10,10 +10,17 @@ import classnames from 'classnames';
 import DefaultTooltip from "shared/components/DefaultTooltip";
 import TextExpander from "shared/components/TextExpander";
 import PdbHeaderCache from "shared/cache/PdbHeaderCache";
+import PdbPositionMappingCache from "shared/cache/PdbPositionMappingCache";
+import {PdbUniprotResidueMapping} from "shared/api/generated/PdbAnnotationAPI";
+import {CacheData} from "shared/lib/LazyMobXCache";
 import {IMobXApplicationDataStore} from "shared/lib/IMobXApplicationDataStore";
+import MutationMapperDataStore from "pages/resultsView/mutation/MutationMapperDataStore";
 import {Mutation} from "shared/api/generated/CBioPortalAPI";
-import {IPdbChain} from "shared/model/Pdb";
+import {IPdbChain, PdbAlignmentIndex} from "shared/model/Pdb";
 import {generatePdbInfoSummary} from "shared/lib/PdbUtils";
+import {
+    groupMutationsByProteinStartPos, getColorForProteinImpactType, IProteinImpactTypeColors
+} from "shared/lib/MutationUtils";
 import {default as TableCellStatusIndicator, TableCellStatus} from "shared/components/TableCellStatus";
 import StructureViewer from "./StructureViewer";
 import {ProteinScheme, ProteinColor, SideChain, MutationColor, IResidueSpec} from "./StructureVisualizer";
@@ -22,10 +29,13 @@ import PyMolScriptGenerator from "./PyMolScriptGenerator";
 import styles from "./structureViewer.module.scss";
 import PdbChainInfo from "../PdbChainInfo";
 
-export interface IStructureViewerPanelProps {
-    pdbChainDataStore: IMobXApplicationDataStore<IPdbChain>
-    mutationDataStore?: IMobXApplicationDataStore<Mutation[]>
+export interface IStructureViewerPanelProps extends IProteinImpactTypeColors
+{
+    pdbChainDataStore: IMobXApplicationDataStore<IPdbChain>;
+    pdbAlignmentIndex?: PdbAlignmentIndex;
+    mutationDataStore?: MutationMapperDataStore;
     pdbHeaderCache?: PdbHeaderCache;
+    pdbPositionMappingCache?: PdbPositionMappingCache;
     onClose?: () => void;
 }
 
@@ -373,7 +383,7 @@ export default class StructureViewerPanel extends React.Component<IStructureView
 
     public mainContent()
     {
-        if (this.pdbId && this.chainId)
+        if (this.pdbId && this.chainId && this.residues)
         {
             // load pdb info & 3D visualizer
             return (
@@ -534,56 +544,132 @@ export default class StructureViewerPanel extends React.Component<IStructureView
         }
     }
 
-    @computed get residues()
+    @computed get residues(): IResidueSpec[]|undefined
     {
-        // TODO this is a static example, actual residues depend on this.props.mutationDataStore
-        return [
-            {
-                positionRange: {
-                    start: {
-                        position: 122
-                    },
-                    end: {
-                        position: 122
-                    }
-                },
-                color: "#FF0000"
-            },
-            {
-                positionRange: {
-                    start: {
-                        position: 1710
-                    },
-                    end: {
-                        position: 1710
-                    }
-                },
-                color: "#FF0000"
-            },
-            {
-                positionRange: {
-                    start: {
-                        position: 1835
-                    },
-                    end: {
-                        position: 1835
-                    }
-                },
-                color: "#00FFFF"
-            },
-            {
-                positionRange: {
-                    start: {
-                        position: 1815
-                    },
-                    end: {
-                        position: 1815
-                    }
-                },
-                color: "#00FF00",
-                highlighted: true
+        if (!this.residueMappingData) {
+            return undefined;
+        }
+
+        const residues: IResidueSpec[] = [];
+
+        this.residueMappingData.forEach((cacheData) => {
+            if (cacheData && cacheData.data) {
+                const mutations = this.mutationsByPosition[cacheData.data.uniprotPosition];
+
+                const highlighted: boolean = (
+                    this.props.mutationDataStore && (
+                        this.props.mutationDataStore.isPositionSelected(cacheData.data.uniprotPosition) ||
+                        this.props.mutationDataStore.isPositionHighlighted(cacheData.data.uniprotPosition)
+                    )
+                ) || false;
+
+                if (mutations && mutations.length > 0) {
+                    residues.push(
+                        {
+                            positionRange: {
+                                start: {
+                                    position: cacheData.data.pdbPosition
+                                },
+                                end: {
+                                    position: cacheData.data.pdbPosition
+                                }
+                            },
+                            color: getColorForProteinImpactType(mutations, this.props),
+                            highlighted
+                        }
+                    );
+                }
             }
-        ];
+        });
+
+        return residues;
+    }
+
+    @computed get residueMappingData(): Array<CacheData<PdbUniprotResidueMapping>|null>|undefined
+    {
+        if (this.alignmentIds.length === 0) {
+            return undefined;
+        }
+
+        const residueMappingData: Array<CacheData<PdbUniprotResidueMapping>|null> = [];
+
+        if (this.props.pdbPositionMappingCache &&
+            this.proteinPositions.length > 0)
+        {
+            // create query parameters
+            this.proteinPositions.forEach((uniprotPosition: number) => {
+                this.alignmentIds.forEach((alignmentId: number) => {
+                    if (this.props.pdbPositionMappingCache) {
+                        residueMappingData.push(this.props.pdbPositionMappingCache.get({
+                            uniprotPosition,
+                            alignmentId
+                        }));
+                    }
+                });
+            });
+        }
+
+        return residueMappingData;
+    }
+
+    @computed get alignmentIds(): number[]
+    {
+        let alignmentIds: number[] = [];
+
+        if (this.pdbChain &&
+            this.props.pdbAlignmentIndex)
+        {
+            const alignments = this.props.pdbAlignmentIndex[this.pdbChain.pdbId][this.pdbChain.chain];
+            alignmentIds = alignments === undefined ? [] :
+                this.props.pdbAlignmentIndex[this.pdbChain.pdbId][this.pdbChain.chain].map(
+                    (alignment) => alignment.alignmentId);
+        }
+
+        return alignmentIds;
+    }
+
+    @computed get mutationsByPosition(): {[pos: number]: Mutation[]}
+    {
+        if (this.props.mutationDataStore) {
+            return groupMutationsByProteinStartPos(this.props.mutationDataStore.sortedFilteredData);
+        }
+        else {
+            return {};
+        }
+    }
+
+    /**
+     * Protein start positions for the mutations falling between the current chain's
+     * start and end.
+     */
+    @computed get proteinPositions(): number[]
+    {
+        const positions: number[] = [];
+
+        if (this.props.mutationDataStore) {
+            this.props.mutationDataStore.sortedFilteredData.forEach((mutations: Mutation[]) => {
+                const mutation = mutations[0];
+
+                // only add positions which fall between chain start & end positions
+                if (this.pdbChain &&
+                    mutation.proteinPosStart > -1 &&
+                    mutation.proteinPosStart >= this.pdbChain.uniprotStart &&
+                    mutation.proteinPosStart <= this.pdbChain.uniprotEnd)
+                {
+                    positions.push(mutation.proteinPosStart);
+                }
+
+                if (this.pdbChain &&
+                    mutation.proteinPosEnd > mutation.proteinPosStart &&
+                    mutation.proteinPosEnd >= this.pdbChain.uniprotStart &&
+                    mutation.proteinPosEnd <= this.pdbChain.uniprotEnd)
+                {
+                    positions.push(mutation.proteinPosEnd);
+                }
+            });
+        }
+
+        return positions;
     }
 
     @computed get pyMolScript()
