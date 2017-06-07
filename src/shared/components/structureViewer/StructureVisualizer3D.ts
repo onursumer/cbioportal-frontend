@@ -1,5 +1,6 @@
 import * as _ from 'lodash';
 import $ from 'jquery';
+import {observable, computed} from "mobx";
 import {convertPdbPosToResAndInsCode} from "shared/lib/PdbUtils";
 import {
     default as StructureVisualizer, ProteinScheme, MutationColor, SideChain,
@@ -44,7 +45,6 @@ interface IStructureVisualizerState
     pdbId: string;
     chainId: string;
     residues: IResidueSpec[];
-    loadingPdb: boolean;
 }
 
 export default class StructureVisualizer3D extends StructureVisualizer
@@ -53,11 +53,13 @@ export default class StructureVisualizer3D extends StructureVisualizer
     private _3dMolViewer: any;
     private _3dMol: any;
 
-    private props: IStructureVisualizerProps;
-    private _prevProps: IStructureVisualizerProps;
+    @observable private props: IStructureVisualizerProps;
+    @observable private _prevProps: IStructureVisualizerProps;
 
-    private state: IStructureVisualizerState;
-    private _prevState: IStructureVisualizerState;
+    @observable private state: IStructureVisualizerState;
+    @observable private _prevState: IStructureVisualizerState;
+
+    private _loadingPdb: boolean = false;
 
     public static get PROTEIN_SCHEME_PRESETS(): {[scheme:number]: AtomStyleSpec}
     {
@@ -100,8 +102,13 @@ export default class StructureVisualizer3D extends StructureVisualizer
         this.state = {
             pdbId: "",
             chainId: "",
-            residues: [],
-            loadingPdb: false
+            residues: []
+        };
+
+        this._prevState = {
+            pdbId: "",
+            chainId: "",
+            residues: []
         };
 
         this.updateViewer = this.updateViewer.bind(this);
@@ -109,7 +116,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
     protected setState(newState: IStructureVisualizerState)
     {
-        // TODO update this._prevState
+        this._prevState = {...this.state};
         this.state = {...this.state, ...newState};
     }
 
@@ -165,17 +172,13 @@ export default class StructureVisualizer3D extends StructureVisualizer
             this._3dMolViewer.clear();
 
             // update load state (mark as loading)
-            this.setState({
-                loadingPdb: true
-            } as IStructureVisualizerState);
+            this._loadingPdb = true;
 
             // TODO handle download error
             // init download
             this._3dMol.download(`pdb:${pdbId.toUpperCase()}`, this._3dMolViewer, options, () => {
                 // update load state (mark as finished)
-                this.setState({
-                    loadingPdb: false
-                } as IStructureVisualizerState);
+                this._loadingPdb = false;
 
                 // use global references instead of the local ones,
                 // since they might be updated before the pdb download ends
@@ -197,7 +200,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
         // do not update or render if pdb is still loading,
         // pdb load callback will take care of the update once the load ends
-        if (!this.state.loadingPdb) {
+        if (!this._loadingPdb) {
             this.updateVisualStyle(residues, chainId, props);
             this._3dMolViewer.render();
         }
@@ -246,15 +249,19 @@ export default class StructureVisualizer3D extends StructureVisualizer
     protected setTransparency(transparency: number, selector?: AtomSelectionSpec, style?: AtomStyleSpec)
     {
         if (style) {
-            _.each(style, (spec: StyleSpec, key: string) => {
-                // TODO sphere opacity is not supported by 3Dmol.js so excluding sphere style for now
-                if (key !== "sphere") {
-                    spec.opacity = (10 - transparency) / 10;
-                }
-            });
-
+            this.addTransparencyToStyle(transparency, style);
             this.applyStyleForSelector(selector, style);
         }
+    }
+
+    protected addTransparencyToStyle(transparency: number, style: any)
+    {
+        _.each(style, (spec: StyleSpec, key: string) => {
+            // TODO sphere opacity is not supported by 3Dmol.js so excluding sphere style for now
+            if (key !== "sphere") {
+                spec.opacity = (10 - transparency) / 10;
+            }
+        });
     }
 
     protected rainbowColor(selector?: AtomSelectionSpec, style?: AtomStyleSpec)
@@ -334,6 +341,12 @@ export default class StructureVisualizer3D extends StructureVisualizer
     {
         const defaultProps = StructureVisualizer.defaultProps;
 
+        if (!style) {
+            style = StructureVisualizer3D.PROTEIN_SCHEME_PRESETS[props.proteinScheme];
+            // need to add transparency to the style, otherwise we got weird visualization
+            this.addTransparencyToStyle(props.chainTranslucency || defaultProps.chainTranslucency, style);
+        }
+
         residues.forEach((residue:IResidueSpec) => {
             // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
             //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
@@ -378,8 +391,8 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
     protected filterResidueSelectors(residueSelectors: IResidueSelector[]): IResidueSelector[]
     {
-        if (this.needToUpdateResiduesOnly()) {
-            // TODO only update the changed ones
+        if (this.needToUpdateResiduesOnly) {
+            // TODO only update the changed ones, not all of them
             return residueSelectors;
         }
         else {
@@ -388,10 +401,20 @@ export default class StructureVisualizer3D extends StructureVisualizer
         }
     }
 
+    protected updateScheme(props: IStructureVisualizerProps)
+    {
+        if (!this.needToUpdateResiduesOnly) {
+            return super.updateScheme(props);
+        }
+        else {
+            return undefined;
+        }
+    }
+
     protected updateBaseVisualStyle(style: any,
                                     props: IStructureVisualizerProps)
     {
-        if (!this.needToUpdateResiduesOnly()) {
+        if (!this.needToUpdateResiduesOnly) {
             super.updateBaseVisualStyle(style, props);
         }
     }
@@ -400,14 +423,61 @@ export default class StructureVisualizer3D extends StructureVisualizer
                                      style: any,
                                      props: IStructureVisualizerProps)
     {
-        if (!this.needToUpdateResiduesOnly()) {
+        if (!this.needToUpdateResiduesOnly) {
             super.updateChainVisualStyle(chainId, style, props);
         }
     }
 
-    protected needToUpdateResiduesOnly(): boolean
+    /**
+     * We need to update only residues if:
+     *    - Pdb id not updated
+     *    - Chain id not updated
+     *    - Visual properties not updated
+     *    - Number of residues and residue positions remain the same
+     */
+    @computed get needToUpdateResiduesOnly(): boolean
     {
-        return false;
+        return (
+            this._prevState.pdbId === this.state.pdbId &&
+            this._prevState.chainId === this.state.chainId &&
+            this.visualPropsUnchanged &&
+            this.residuePositionsUnchanged
+        );
+    }
+
+    @computed get residuePositionsUnchanged(): boolean
+    {
+        return _.isEqual(_.keys(this.currentResidueToPositionMap).sort(),
+            _.keys(this.prevResidueToPositionMap).sort());
+    }
+
+    protected generateResidueToPositionMap(residues: IResidueSpec[])
+    {
+        let residueSelectors: IResidueSelector[] = [];
+
+        residues.forEach((residue:IResidueSpec) => {
+            // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
+            //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
+            residueSelectors = residueSelectors.concat(convertPdbPosToResAndInsCode(residue.positionRange));
+        });
+
+        return _.groupBy(residueSelectors, "resi");
+    }
+
+    @computed get currentResidueToPositionMap()
+    {
+        return this.generateResidueToPositionMap(this.state.residues);
+    }
+
+    @computed get prevResidueToPositionMap()
+    {
+        return this.generateResidueToPositionMap(this._prevState.residues);
+    }
+
+    @computed get visualPropsUnchanged(): boolean
+    {
+        return _.isEqual(_.omit(this.props, ["pdbId", "chainId", "residues"]),
+            _.omit(this._prevProps, ["pdbId", "chainId", "residues"]));
     }
 
     /**

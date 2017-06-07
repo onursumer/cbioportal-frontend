@@ -111,15 +111,20 @@ abstract class StructureVisualizer
                              chainId: string,
                              props: IStructureVisualizerProps)
     {
-        const defaultProps = StructureVisualizer.defaultProps;
-
-        let selector = this.selectAll(); // select everything
-        let style = this.setScheme(props.proteinScheme, selector); // show selected style view
-
+        let style = this.updateScheme(props);
         this.updateBaseVisualStyle(style, props);
         this.updateChainVisualStyle(chainId, style, props);
         this.updateResidueStyle(residues, chainId, props, style);
         this.updateBoundMolecules(props);
+    }
+
+    protected updateScheme(props: IStructureVisualizerProps)
+    {
+        // select everything
+        let selector = this.selectAll();
+
+        // show selected style view
+        return this.setScheme(props.proteinScheme, selector);
     }
 
     protected updateBaseVisualStyle(style: any,
