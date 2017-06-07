@@ -36,7 +36,15 @@ export type AtomStyleSpec = {
 
 export interface IResidueSelector {
     resi: number;
-    icode?:string;
+    icode?: string;
+}
+
+interface IStructureVisualizerState
+{
+    pdbId: string;
+    chainId: string;
+    residues: IResidueSpec[];
+    loadingPdb: boolean;
 }
 
 export default class StructureVisualizer3D extends StructureVisualizer
@@ -45,11 +53,11 @@ export default class StructureVisualizer3D extends StructureVisualizer
     private _3dMolViewer: any;
     private _3dMol: any;
 
-    private _props: IStructureVisualizerProps;
-    private _residues: IResidueSpec[] = [];
-    private _chainId: string;
+    private props: IStructureVisualizerProps;
+    private _prevProps: IStructureVisualizerProps;
 
-    private _loadingPdb: boolean = false;
+    private state: IStructureVisualizerState;
+    private _prevState: IStructureVisualizerState;
 
     public static get PROTEIN_SCHEME_PRESETS(): {[scheme:number]: AtomStyleSpec}
     {
@@ -81,17 +89,39 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
         this._3dMol = _3dMol || $3Dmol;
         this._3dMolDiv = div;
-        this._props = {
+
+        // init props
+        this.props = {
             ...StructureVisualizer.defaultProps,
             ...props
+        };
+
+        // init state
+        this.state = {
+            pdbId: "",
+            chainId: "",
+            residues: [],
+            loadingPdb: false
         };
 
         this.updateViewer = this.updateViewer.bind(this);
     }
 
+    protected setState(newState: IStructureVisualizerState)
+    {
+        // TODO update this._prevState
+        this.state = {...this.state, ...newState};
+    }
+
+    protected setProps(newProps: IStructureVisualizerProps)
+    {
+        this._prevProps = this.props;
+        this.props = newProps;
+    }
+
     public init(pdbId: string,
                 chainId: string,
-                residues: IResidueSpec[] = this._residues,
+                residues: IResidueSpec[] = this.state.residues,
                 viewer?: any)
     {
         if (viewer) {
@@ -107,7 +137,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
         if (this._3dMolViewer)
         {
             const backgroundColor = this.formatColor(
-                this._props.backgroundColor || StructureVisualizer.defaultProps.backgroundColor);
+                this.props.backgroundColor || StructureVisualizer.defaultProps.backgroundColor);
             this._3dMolViewer.setBackgroundColor(backgroundColor);
             this.loadPdb(pdbId, chainId, residues);
         }
@@ -115,8 +145,8 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
     public loadPdb(pdbId: string,
                    chainId: string,
-                   residues: IResidueSpec[] = this._residues,
-                   props:IStructureVisualizerProps = this._props)
+                   residues: IResidueSpec[] = this.state.residues,
+                   props:IStructureVisualizerProps = this.props)
     {
         const options = {
             doAssembly: true,
@@ -125,52 +155,52 @@ export default class StructureVisualizer3D extends StructureVisualizer
             // frames: true
         };
 
-        // update global references
-        this._props = props;
-        this._chainId = chainId;
-        this._residues = residues;
+        // update state
+        this.setState({
+            pdbId, chainId, residues
+        } as IStructureVisualizerState);
 
         if (this._3dMolViewer) {
             // clear previous content
             this._3dMolViewer.clear();
 
             // update load state (mark as loading)
-            this._loadingPdb = true;
+            this.setState({
+                loadingPdb: true
+            } as IStructureVisualizerState);
 
             // TODO handle download error
             // init download
             this._3dMol.download(`pdb:${pdbId.toUpperCase()}`, this._3dMolViewer, options, () => {
                 // update load state (mark as finished)
-                this._loadingPdb = false;
+                this.setState({
+                    loadingPdb: false
+                } as IStructureVisualizerState);
 
                 // use global references instead of the local ones,
                 // since they might be updated before the pdb download ends
-                this.updateViewer(this._chainId, this._residues, this._props);
+                this.updateVisualStyle(this.state.residues, this.state.chainId, this.props);
+                this._3dMolViewer.render();
             });
         }
     }
 
-    public updateViewer(chainId:string,
-                        residues: IResidueSpec[] = this._residues,
-                        props:IStructureVisualizerProps = this._props)
+    public updateViewer(chainId: string,
+                        residues: IResidueSpec[] = this.state.residues,
+                        props:IStructureVisualizerProps = this.props)
     {
         // update global references
-        this._props = props;
-        this._chainId = chainId;
-        this._residues = residues;
+        this.setProps(props);
+        this.setState({
+            chainId, residues
+        } as IStructureVisualizerState);
 
         // do not update or render if pdb is still loading,
         // pdb load callback will take care of the update once the load ends
-        if (!this._loadingPdb) {
+        if (!this.state.loadingPdb) {
             this.updateVisualStyle(residues, chainId, props);
             this._3dMolViewer.render();
         }
-    }
-
-    public updateResidues(residues: IResidueSpec[])
-    {
-        this._residues = residues;
-        this.updateViewer(this._chainId, residues);
     }
 
     protected selectAll()
@@ -299,7 +329,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
     protected updateResidueStyle(residues: IResidueSpec[],
                                  chainId: string,
-                                 props: IStructureVisualizerProps = this._props,
+                                 props: IStructureVisualizerProps = this.props,
                                  style?: AtomStyleSpec)
     {
         const defaultProps = StructureVisualizer.defaultProps;
@@ -307,7 +337,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
         residues.forEach((residue:IResidueSpec) => {
             // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
             //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
-            const residueSelectors = convertPdbPosToResAndInsCode(residue.positionRange);
+            const residueSelectors = this.filterResidueSelectors(convertPdbPosToResAndInsCode(residue.positionRange));
 
             residueSelectors.forEach((residueSelector) => {
                 let selector = this.selectResidue(residueSelector, chainId);
@@ -315,7 +345,7 @@ export default class StructureVisualizer3D extends StructureVisualizer
 
                 // use the highlight color if highlighted (always color highlighted residues)
                 if (residue.highlighted) {
-                    color = this._props.highlightColor || defaultProps.highlightColor;
+                    color = this.props.highlightColor || defaultProps.highlightColor;
                     this.setColor(color, selector, style);
                 }
                 // use the provided color
@@ -346,12 +376,46 @@ export default class StructureVisualizer3D extends StructureVisualizer
         });
     }
 
+    protected filterResidueSelectors(residueSelectors: IResidueSelector[]): IResidueSelector[]
+    {
+        if (this.needToUpdateResiduesOnly()) {
+            // TODO only update the changed ones
+            return residueSelectors;
+        }
+        else {
+            // otherwise need to update everything
+            return residueSelectors;
+        }
+    }
+
+    protected updateBaseVisualStyle(style: any,
+                                    props: IStructureVisualizerProps)
+    {
+        if (!this.needToUpdateResiduesOnly()) {
+            super.updateBaseVisualStyle(style, props);
+        }
+    }
+
+    protected updateChainVisualStyle(chainId: string,
+                                     style: any,
+                                     props: IStructureVisualizerProps)
+    {
+        if (!this.needToUpdateResiduesOnly()) {
+            super.updateChainVisualStyle(chainId, style, props);
+        }
+    }
+
+    protected needToUpdateResiduesOnly(): boolean
+    {
+        return false;
+    }
+
     /**
      * Updates the visual style (scheme, coloring, selection, etc.)
      */
     public updateVisualStyle(residues: IResidueSpec[],
                              chainId: string,
-                             props: IStructureVisualizerProps = this._props)
+                             props: IStructureVisualizerProps = this.props)
     {
         super.updateVisualStyle(residues, chainId, props);
     }
