@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import $ from 'jquery';
-import {observable, computed} from "mobx";
+import {observable, computed, reaction, autorun, action} from "mobx";
 import {convertPdbPosToResAndInsCode} from "shared/lib/PdbUtils";
 import {
     default as StructureVisualizer, ProteinScheme, MutationColor, SideChain,
@@ -38,6 +38,15 @@ export type AtomStyleSpec = {
 export interface IResidueSelector {
     resi: number;
     icode?: string;
+}
+
+type ResidueSelectorMap = {
+    [residue: number]: IResidueHelper[]
+};
+
+interface IResidueHelper {
+    selector: IResidueSelector;
+    residue: IResidueSpec;
 }
 
 interface IStructureVisualizerState
@@ -114,10 +123,28 @@ export default class StructureVisualizer3D extends StructureVisualizer
         this.updateViewer = this.updateViewer.bind(this);
     }
 
-    protected setState(newState: IStructureVisualizerState)
+    @action setState(newState: IStructureVisualizerState)
     {
         this._prevState = {...this.state};
         this.state = {...this.state, ...newState};
+    }
+
+    // reaction to setState
+    private stateChangeReaction = reaction(
+        () => this.state,
+        (state: IStructureVisualizerState) => {
+            this.onStateChange(state);
+        }
+    );
+
+    private onStateChange(state: IStructureVisualizerState)
+    {
+        // do not update or render if pdb is still loading,
+        // pdb load callback will take care of the update once the load ends
+        if (this._prevState && !this._loadingPdb) {
+            this.updateVisualStyle(state.residues, state.chainId, this.props);
+            this._3dMolViewer.render();
+        }
     }
 
     protected setProps(newProps: IStructureVisualizerProps)
@@ -162,6 +189,9 @@ export default class StructureVisualizer3D extends StructureVisualizer
             // frames: true
         };
 
+        // update load state (mark as loading)
+        this._loadingPdb = true;
+
         // update state
         this.setState({
             pdbId, chainId, residues
@@ -171,20 +201,19 @@ export default class StructureVisualizer3D extends StructureVisualizer
             // clear previous content
             this._3dMolViewer.clear();
 
-            // update load state (mark as loading)
-            this._loadingPdb = true;
-
             // TODO handle download error
             // init download
             this._3dMol.download(`pdb:${pdbId.toUpperCase()}`, this._3dMolViewer, options, () => {
                 // update load state (mark as finished)
                 this._loadingPdb = false;
-
-                // use global references instead of the local ones,
-                // since they might be updated before the pdb download ends
-                this.updateVisualStyle(this.state.residues, this.state.chainId, this.props);
-                this._3dMolViewer.render();
+                // use the global state instead of the local variables,
+                // since the state might be updated before the pdb download ends
+                this.onStateChange(this.state);
             });
+        }
+        else {
+            // update load state (mark as finished)
+            this._loadingPdb = false;
         }
     }
 
@@ -197,13 +226,6 @@ export default class StructureVisualizer3D extends StructureVisualizer
         this.setState({
             chainId, residues
         } as IStructureVisualizerState);
-
-        // do not update or render if pdb is still loading,
-        // pdb load callback will take care of the update once the load ends
-        if (!this._loadingPdb) {
-            this.updateVisualStyle(residues, chainId, props);
-            this._3dMolViewer.render();
-        }
     }
 
     protected selectAll()
@@ -347,58 +369,43 @@ export default class StructureVisualizer3D extends StructureVisualizer
             this.addTransparencyToStyle(props.chainTranslucency || defaultProps.chainTranslucency, style);
         }
 
-        residues.forEach((residue:IResidueSpec) => {
-            // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
-            //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
-            const residueSelectors = this.filterResidueSelectors(convertPdbPosToResAndInsCode(residue.positionRange));
+        let residueHelpers: IResidueHelper[] = this.residuesToUpdate;
 
-            residueSelectors.forEach((residueSelector) => {
-                let selector = this.selectResidue(residueSelector, chainId);
-                let color: string|undefined;
+        residueHelpers.forEach((residueHelper: IResidueHelper) => {
+            let residue = residueHelper.residue;
+            let selector = this.selectResidue(residueHelper.selector, chainId);
+            let color: string|undefined;
 
-                // use the highlight color if highlighted (always color highlighted residues)
-                if (residue.highlighted) {
-                    color = this.props.highlightColor || defaultProps.highlightColor;
-                    this.setColor(color, selector, style);
-                }
-                // use the provided color
-                else if (props.mutationColor === MutationColor.MUTATION_TYPE) {
-                    color = residue.color;
-                    this.setColor(color, selector, style);
-                }
-                // use a uniform color
-                else if (props.mutationColor === MutationColor.UNIFORM) {
-                    // color with a uniform mutation color
-                    color = props.uniformMutationColor || defaultProps.uniformMutationColor;
-                    this.setColor(color, selector, style);
-                }
-                // else: NONE (no need to color)
+            // use the highlight color if highlighted (always color highlighted residues)
+            if (residue.highlighted) {
+                color = this.props.highlightColor || defaultProps.highlightColor;
+                this.setColor(color, selector, style);
+            }
+            // use the provided color
+            else if (props.mutationColor === MutationColor.MUTATION_TYPE) {
+                color = residue.color;
+                this.setColor(color, selector, style);
+            }
+            // use a uniform color
+            else if (props.mutationColor === MutationColor.UNIFORM) {
+                // color with a uniform mutation color
+                color = props.uniformMutationColor || defaultProps.uniformMutationColor;
+                this.setColor(color, selector, style);
+            }
+            // else: NONE (no need to color)
 
-                const displaySideChain = props.sideChain === SideChain.ALL ||
-                    (residue.highlighted === true && props.sideChain === SideChain.SELECTED);
+            const displaySideChain = props.sideChain === SideChain.ALL ||
+                (residue.highlighted === true && props.sideChain === SideChain.SELECTED);
 
-                // show side chains
-                if (displaySideChain) {
-                    this.updateSideChain(chainId,
-                        residueSelector,
-                        props.proteinScheme,
-                        color,
-                        style);
-                }
-            });
+            // show side chains
+            if (displaySideChain) {
+                this.updateSideChain(chainId,
+                    residueHelper.selector,
+                    props.proteinScheme,
+                    color,
+                    style);
+            }
         });
-    }
-
-    protected filterResidueSelectors(residueSelectors: IResidueSelector[]): IResidueSelector[]
-    {
-        if (this.needToUpdateResiduesOnly) {
-            // TODO only update the changed ones, not all of them
-            return residueSelectors;
-        }
-        else {
-            // otherwise need to update everything
-            return residueSelectors;
-        }
     }
 
     protected updateScheme(props: IStructureVisualizerProps)
@@ -428,6 +435,18 @@ export default class StructureVisualizer3D extends StructureVisualizer
         }
     }
 
+    @computed get residuesToUpdate(): IResidueHelper[]
+    {
+        if (this.needToUpdateResiduesOnly) {
+            // TODO only update the residues that has changed
+            return _.flatten(_.values(this.currentResidueToPositionMap));
+        }
+        else {
+            // update all the residues
+            return _.flatten(_.values(this.currentResidueToPositionMap));
+        }
+    }
+
     /**
      * We need to update only residues if:
      *    - Pdb id not updated
@@ -451,25 +470,40 @@ export default class StructureVisualizer3D extends StructureVisualizer
             _.keys(this.prevResidueToPositionMap).sort());
     }
 
-    protected generateResidueToPositionMap(residues: IResidueSpec[])
+    protected generateResidueToPositionMap(residues: IResidueSpec[]): ResidueSelectorMap
     {
-        let residueSelectors: IResidueSelector[] = [];
+        const map: ResidueSelectorMap = {};
 
         residues.forEach((residue:IResidueSpec) => {
             // TODO "rescode" selector does not work anymore for some reason (using selectResidue instead)
             //const resCodes = this.convertPositionsToResCode([residue.positionRange]);
-            residueSelectors = residueSelectors.concat(convertPdbPosToResAndInsCode(residue.positionRange));
+
+            const residueSelectors = convertPdbPosToResAndInsCode(residue.positionRange);
+            const grouped = _.groupBy(residueSelectors, "resi");
+
+            _.each(_.keys(grouped), (resi: number) => {
+                if (!map[resi]) {
+                    map[resi] = [];
+                }
+
+                _.each(grouped[resi], (selector: IResidueSelector) => {
+                    map[resi].push({
+                        selector: selector,
+                        residue: residue
+                    });
+                });
+            });
         });
 
-        return _.groupBy(residueSelectors, "resi");
+        return map;
     }
 
-    @computed get currentResidueToPositionMap()
+    @computed get currentResidueToPositionMap(): ResidueSelectorMap
     {
         return this.generateResidueToPositionMap(this.state.residues);
     }
 
-    @computed get prevResidueToPositionMap()
+    @computed get prevResidueToPositionMap(): ResidueSelectorMap
     {
         return this.generateResidueToPositionMap(this._prevState.residues);
     }
