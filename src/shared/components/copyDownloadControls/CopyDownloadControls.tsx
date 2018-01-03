@@ -13,7 +13,9 @@ import copyDownloadStyles from "./copyDownloadControls.module.scss";
 export interface ICopyDownloadControlsProps {
     className?: string;
     showCopy?: boolean;
+    copyButtonLabel?: string;
     showDownload?: boolean;
+    downloadButtonLabel?: string;
     downloadData?: () => Promise<ICopyDownloadData>;
     downloadFilename?: string;
 }
@@ -98,7 +100,7 @@ export class CopyDownloadControls extends React.Component<ICopyDownloadControlsP
                                 data-clipboard-text="NA"
                                 id="copyButton"
                             >
-                                <i className='fa fa-clipboard'/>
+                                {this.props.copyButtonLabel} <i className='fa fa-clipboard'/>
                             </button>
                         </DefaultTooltip>
                     </If>
@@ -112,7 +114,7 @@ export class CopyDownloadControls extends React.Component<ICopyDownloadControlsP
                             arrowContent={arrowContent}
                         >
                             <Button className="btn-sm" onClick={this.handleDownload}>
-                                <i className='fa fa-cloud-download'/>
+                                {this.props.downloadButtonLabel} <i className='fa fa-cloud-download'/>
                             </Button>
                         </DefaultTooltip>
                     </If>

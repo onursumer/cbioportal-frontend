@@ -14,6 +14,7 @@ import Mutations from "./mutation/Mutations";
 import {stringListToSet} from "../../shared/lib/StringUtils";
 import MutualExclusivityTab from "./mutualExclusivity/MutualExclusivityTab";
 import SurvivalTab from "./survival/SurvivalTab";
+import DownloadTab from "./download/DownloadTab";
 import Chart from 'chart.js';
 import {CancerStudy, Sample} from "../../shared/api/generated/CBioPortalAPI";
 import AppConfig from 'appConfig';
@@ -249,6 +250,14 @@ export default class ResultsViewPage extends React.Component<IResultsViewPagePro
             return (<div className="cbioportal-frontend">
                 <SurvivalTab store={this.resultsViewPageStore}/>
             </div>)
+        });
+
+        exposeComponentRenderer('renderDownloadTab', () => {
+            return (
+                <div>
+                    <DownloadTab store={this.resultsViewPageStore} />
+                </div>
+            );
         });
     }
 
