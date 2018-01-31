@@ -35,31 +35,50 @@ export function generateOqlValue(data: IOqlData): string
 {
     const oqlValue: string[] = [];
 
-    if (data.mutation.length > 0) {
-        oqlValue.push("MUT:");
-        oqlValue.push(data.mutation.join(",") + ";");
-    }
+    // helper functions to map the display value for different alteration types
+    const stringMapper = (alterationData: (string|ISubAlteration)[]) => alterationData;
+    const subAlterationMapper = (alterationData: (string|ISubAlteration)[]) =>
+        alterationData.map((alteration: ISubAlteration) => alteration.type);
 
-    if (data.fusion.length > 0) {
-        oqlValue.push("FUSION:");
-        oqlValue.push(data.fusion.join(",") + ";");
-    }
+    // generator labels and data extraction functions for different alteration types
+    const generators = [
+        {
+            label: "MUT",
+            getAlterationData: (oqlData: IOqlData) => oqlData.mutation,
+            getValues: stringMapper
+        },
+        {
+            label: "FUSION",
+            getAlterationData: (oqlData: IOqlData) => oqlData.fusion,
+            getValues: stringMapper
+        },
+        {
+            label: "CNA",
+            getAlterationData: (oqlData: IOqlData) => oqlData.cna,
+            getValues: subAlterationMapper
+        },
+        {
+            label: "EXP",
+            getAlterationData: (oqlData: IOqlData) => oqlData.mrnaExp,
+            getValues: subAlterationMapper
+        },
+        {
+            label: "PROT",
+            getAlterationData: (oqlData: IOqlData) => oqlData.proteinLevel,
+            getValues: subAlterationMapper
+        }
+    ];
 
-    if (data.cna.length > 0) {
-        oqlValue.push("CNA:");
-        oqlValue.push(data.cna.map(cna => cna.type).join(",") + ";");
-    }
+    // for each alteration type, transform alteration data into a comma separated string
+    generators.forEach((generator) => {
+        const alterationData = generator.getAlterationData(data);
 
-    if (data.mrnaExp.length > 0) {
-        oqlValue.push("EXP:");
-        oqlValue.push(data.mrnaExp.map(exp => exp.type).join(",") + ";");
-    }
+        if (alterationData.length > 0) {
+            oqlValue.push(`${generator.label}: ${generator.getValues(alterationData).join(",")};`);
+        }
+    });
 
-    if (data.proteinLevel.length > 0) {
-        oqlValue.push("PROT:");
-        oqlValue.push(data.proteinLevel.map(prot => prot.type).join(",") + ";");
-    }
-
+    // finally, generate a single line summary with all alteration data combined.
     return oqlValue.join(" ");
 }
 
@@ -76,7 +95,7 @@ export default class CaseAlterationTable extends React.Component<ICaseAlteration
                 download: (data: ICaseAlteration) => data.studyId,
                 sortBy: (data: ICaseAlteration) => data.studyId,
                 filter: (data: ICaseAlteration, filterString: string, filterStringUpper: string) => {
-                    return data.studyId.toUpperCase().indexOf(filterStringUpper) > -1;
+                    return data.studyId.toUpperCase().includes(filterStringUpper);
                 }
             },
             {
@@ -85,7 +104,7 @@ export default class CaseAlterationTable extends React.Component<ICaseAlteration
                 download: (data: ICaseAlteration) => `${data.sampleId}`,
                 sortBy: (data: ICaseAlteration) => data.sampleId,
                 filter: (data: ICaseAlteration, filterString: string, filterStringUpper: string) => {
-                    return data.sampleId.toUpperCase().indexOf(filterStringUpper) > -1;
+                    return data.sampleId.toUpperCase().includes(filterStringUpper);
                 }
             },
             {
@@ -94,7 +113,7 @@ export default class CaseAlterationTable extends React.Component<ICaseAlteration
                 download: (data: ICaseAlteration) => `${data.patientId}`,
                 sortBy: (data: ICaseAlteration) => data.patientId,
                 filter: (data: ICaseAlteration, filterString: string, filterStringUpper: string) => {
-                    return data.patientId.toUpperCase().indexOf(filterStringUpper) > -1;
+                    return data.patientId.toUpperCase().includes(filterStringUpper);
                 }
             },
             {
@@ -118,7 +137,7 @@ export default class CaseAlterationTable extends React.Component<ICaseAlteration
                     data.oqlData ? generateOqlValue(data.oqlData[oql.oql_line]) : "",
                 filter: (data: ICaseAlteration, filterString: string, filterStringUpper: string) => {
                     return data.oqlData &&
-                        generateOqlValue(data.oqlData[oql.oql_line]).toUpperCase().indexOf(filterStringUpper) > -1;
+                        generateOqlValue(data.oqlData[oql.oql_line]).toUpperCase().includes(filterStringUpper);
                 }
             });
         });
