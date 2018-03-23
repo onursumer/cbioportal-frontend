@@ -2,7 +2,9 @@ import * as React from "react";
 import {observer} from "mobx-react";
 import {observable, computed} from "mobx";
 import * as _ from "lodash";
-import {default as LazyMobXTable, Column, SortDirection} from "shared/components/lazyMobXTable/LazyMobXTable";
+import {
+    default as LazyMobXTable, Column, SortDirection, resolveColumnVisibility
+} from "shared/components/lazyMobXTable/LazyMobXTable";
 import {CancerStudy, MolecularProfile, Mutation} from "shared/api/generated/CBioPortalAPI";
 import SampleColumnFormatter from "./column/SampleColumnFormatter";
 import TumorAlleleFreqColumnFormatter from "./column/TumorAlleleFreqColumnFormatter";
@@ -80,6 +82,8 @@ export interface IMutationTableProps {
     initialSortDirection?:SortDirection;
     paginationProps?:IPaginationControlsProps;
     showCountHeader?:boolean;
+    columnVisibility?: {[columnId: string]: boolean};
+    resolveColumnVisibility?: (columns: Array<Column<Mutation[]>>) => {[columnId: string]: boolean};
 }
 
 export enum MutationTableColumnType {
@@ -149,6 +153,7 @@ export function defaultFilter(data:Mutation[], dataField:string, filterStringUpp
 @observer
 export default class MutationTable<P extends IMutationTableProps> extends React.Component<P, {}> {
     @observable protected _columns:{[columnEnum:number]:MutationTableColumn};
+    protected _columnVisibilityOverride: {[columnId: string]: boolean};
 
     public static defaultProps = {
         initialItemsPerPage: 25,
@@ -168,6 +173,8 @@ export default class MutationTable<P extends IMutationTableProps> extends React.
     {
         super(props);
         this._columns = {};
+        this._columnVisibilityOverride = {};
+        this.resolveColumnVisibility = this.resolveColumnVisibility.bind(this);
         this.generateColumns();
     }
 
@@ -533,7 +540,40 @@ export default class MutationTable<P extends IMutationTableProps> extends React.
                 itemsLabelPlural={this.props.itemsLabelPlural}
                 paginationProps={this.props.paginationProps}
                 showCountHeader={this.props.showCountHeader}
+                columnVisibility={this.props.columnVisibility}
+                resolveColumnVisibility={this.props.resolveColumnVisibility || this.resolveColumnVisibility}
             />
         );
+    }
+
+    protected updateColumnVisibility(columnVisiblity: {[columnId: string]: boolean})
+    {
+        // update the column visibility override, so that resolveColumnVisibility function can use it
+        this._columnVisibilityOverride = columnVisiblity;
+    }
+
+    protected resolveColumnVisibility(columns: Array<Column<Mutation[]>>,
+                                      columnVisibility?: {[columnId: string]: boolean}): {[columnId: string]: boolean}
+    {
+        let colVis: {[columnId: string]: boolean};
+
+        if (!columnVisibility) {
+            colVis = resolveColumnVisibility(columns);
+        }
+        else {
+            colVis = columnVisibility;
+        }
+
+        if (!_.isEmpty(this._columnVisibilityOverride))
+        {
+            // override the existing columnVisibility if an update needed after init
+            colVis = {...colVis, ...this._columnVisibilityOverride};
+
+            // reset the override content, so that we won't override again for the next call
+            // otherwise we would lose the user selection
+            this._columnVisibilityOverride = {};
+        }
+
+        return colVis;
     }
 }

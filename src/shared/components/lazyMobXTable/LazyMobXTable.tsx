@@ -61,6 +61,8 @@ type LazyMobXTableProps<T> = {
     enableHorizontalScroll?:boolean;
     showColumnVisibility?:boolean;
     columnVisibilityProps?:IColumnVisibilityControlsProps;
+    columnVisibility?: {[columnId: string]: boolean};
+    resolveColumnVisibility?:(columns: Array<Column<T>>, columnVisibility?: {[columnId: string]: boolean}) => {[columnId: string]: boolean};
     highlightColor?:"yellow"|"bluegray";
     pageToHighlight?:boolean;
     showCountHeader?:boolean;
@@ -187,6 +189,24 @@ function getDownloadObject<T>(columns: Column<T>[], rowData: T) {
         }
     });
     return downloadObject;
+}
+
+export function resolveColumnVisibility<T>(columns: Array<Column<T>>): {[columnId: string]: boolean}
+{
+    const colVis:{[columnId: string]: boolean} = {};
+
+    columns.forEach((column:Column<T>) => {
+        // every column is visible by default unless it is flagged otherwise
+        let visible = true;
+
+        if (column.visible !== undefined) {
+            visible = column.visible;
+        }
+
+        colVis[column.name] = visible;
+    });
+
+    return colVis;
 }
 
 class LazyMobXTableStore<T> {
@@ -502,7 +522,7 @@ class LazyMobXTableStore<T> {
         this.columns = props.columns;
         this._itemsLabel = props.itemsLabel;
         this._itemsLabelPlural = props.itemsLabelPlural;
-        this._columnVisibility = this.resolveColumnVisibility(props.columns);
+        this._columnVisibility = this.resolveColumnVisibility(props);
         this.highlightColor = props.highlightColor!;
         this.downloadDataFetcher = props.downloadDataFetcher;
 
@@ -539,22 +559,27 @@ class LazyMobXTableStore<T> {
         return this.columnVisibility[column.name] || false;
     }
 
-    resolveColumnVisibility(columns:Array<Column<T>>): {[columnId: string]: boolean}
+    private resolveColumnVisibility(props: LazyMobXTableProps<T>): {[columnId: string]: boolean}
     {
-        const colVis:{[columnId: string]: boolean} = {};
+        let columnVisibility: {[columnId: string]: boolean};
 
-        columns.forEach((column:Column<T>) => {
-            // every column is visible by default unless it is flagged otherwise
-            let visible:boolean = true;
+        // if a custom columnVisibility object is provided use that one
+        if (props.columnVisibility) {
+            columnVisibility = props.columnVisibility;
+        }
+        // call the custom resolveColumnVisibility function if provided
+        // (this gives parent component full control over visibility)
+        else if (props.resolveColumnVisibility) {
+            columnVisibility = props.resolveColumnVisibility(props.columns, this._columnVisibility);
+        }
+        // resolve visibility by column definition
+        // (in some cases this may reset the visibility to initial state and override the user selection.
+        // a custom columnVisibility prop or resolveColumnVisibility func is required to prevent this)
+        else  {
+            columnVisibility = resolveColumnVisibility<T>(props.columns);
+        }
 
-            if (column.visible !== undefined) {
-                visible = column.visible;
-            }
-
-            colVis[column.name] = visible;
-        });
-
-        return colVis;
+        return columnVisibility;
     }
 
     constructor(lazyMobXTableProps:LazyMobXTableProps<T>) {
@@ -626,6 +651,13 @@ export default class LazyMobXTable<T> extends React.Component<LazyMobXTableProps
         });
     }
 
+    protected updateColumnVisibility(id: string, visible: boolean)
+    {
+        if (this.store.columnVisibility[id] !== undefined) {
+            this.store.updateColumnVisibility(id, visible);
+        }
+    }
+
     constructor(props:LazyMobXTableProps<T>) {
         super(props);
         this.store = new LazyMobXTableStore<T>(props);
@@ -649,7 +681,7 @@ export default class LazyMobXTable<T> extends React.Component<LazyMobXTableProps
                 // ignore undefined columns
                 if (this.store.columnVisibility[columnId] !== undefined) {
                     // toggle visibility
-                    this.store.updateColumnVisibility(columnId, !this.store.columnVisibility[columnId]);
+                    this.updateColumnVisibility(columnId, !this.store.columnVisibility[columnId]);
                 }
             },
             changeItemsPerPage:(ipp:number)=>{
