@@ -62,7 +62,6 @@ type LazyMobXTableProps<T> = {
     showColumnVisibility?:boolean;
     columnVisibilityProps?:IColumnVisibilityControlsProps;
     columnVisibility?: {[columnId: string]: boolean};
-    resolveColumnVisibility?:(columns: Array<Column<T>>, columnVisibility?: {[columnId: string]: boolean}) => {[columnId: string]: boolean};
     highlightColor?:"yellow"|"bluegray";
     pageToHighlight?:boolean;
     showCountHeader?:boolean;
@@ -566,11 +565,6 @@ class LazyMobXTableStore<T> {
         // if a custom columnVisibility object is provided use that one
         if (props.columnVisibility) {
             columnVisibility = props.columnVisibility;
-        }
-        // call the custom resolveColumnVisibility function if provided
-        // (this gives parent component full control over visibility)
-        else if (props.resolveColumnVisibility) {
-            columnVisibility = props.resolveColumnVisibility(props.columns, this._columnVisibility);
         }
         // resolve visibility by column definition
         // (in some cases this may reset the visibility to initial state and override the user selection.

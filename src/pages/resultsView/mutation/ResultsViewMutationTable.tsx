@@ -51,21 +51,7 @@ export default class ResultsViewMutationTable extends MutationTable<IResultsView
     };
 
     componentWillUpdate(nextProps:IResultsViewMutationTableProps) {
-        // we want to toggle visibility of study column only once (right after studyIdToStudy is set)
-        // we don't want to reset the visibility for each component update
-        // this allows us to keep the user selection intact
-        if (nextProps.studyIdToStudy && !this._studyVisibilityInit)
-        {
-            // mark as init so we won't update visibility for the next re-render
-            this._studyVisibilityInit = true;
-
-            // construct column visibility object for the update
-            const columnId = this._columns[MutationTableColumnType.STUDY].name;
-            const columnVisiblity: {[columnId: string]: boolean} = {};
-            columnVisiblity[columnId] = Object.keys(nextProps.studyIdToStudy).length > 1;
-
-            this.updateColumnVisibility(columnVisiblity);
-        }
+        this._columns[MutationTableColumnType.STUDY].visible = !!(nextProps.studyIdToStudy && (Object.keys(nextProps.studyIdToStudy).length > 1));
     }
 
     protected generateColumns() {

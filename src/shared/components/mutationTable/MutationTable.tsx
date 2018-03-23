@@ -83,7 +83,6 @@ export interface IMutationTableProps {
     paginationProps?:IPaginationControlsProps;
     showCountHeader?:boolean;
     columnVisibility?: {[columnId: string]: boolean};
-    resolveColumnVisibility?: (columns: Array<Column<Mutation[]>>) => {[columnId: string]: boolean};
 }
 
 export enum MutationTableColumnType {
@@ -153,7 +152,6 @@ export function defaultFilter(data:Mutation[], dataField:string, filterStringUpp
 @observer
 export default class MutationTable<P extends IMutationTableProps> extends React.Component<P, {}> {
     @observable protected _columns:{[columnEnum:number]:MutationTableColumn};
-    protected _columnVisibilityOverride: {[columnId: string]: boolean};
 
     public static defaultProps = {
         initialItemsPerPage: 25,
@@ -173,8 +171,6 @@ export default class MutationTable<P extends IMutationTableProps> extends React.
     {
         super(props);
         this._columns = {};
-        this._columnVisibilityOverride = {};
-        this.resolveColumnVisibility = this.resolveColumnVisibility.bind(this);
         this.generateColumns();
     }
 
@@ -541,39 +537,7 @@ export default class MutationTable<P extends IMutationTableProps> extends React.
                 paginationProps={this.props.paginationProps}
                 showCountHeader={this.props.showCountHeader}
                 columnVisibility={this.props.columnVisibility}
-                resolveColumnVisibility={this.props.resolveColumnVisibility || this.resolveColumnVisibility}
             />
         );
-    }
-
-    protected updateColumnVisibility(columnVisiblity: {[columnId: string]: boolean})
-    {
-        // update the column visibility override, so that resolveColumnVisibility function can use it
-        this._columnVisibilityOverride = columnVisiblity;
-    }
-
-    protected resolveColumnVisibility(columns: Array<Column<Mutation[]>>,
-                                      columnVisibility?: {[columnId: string]: boolean}): {[columnId: string]: boolean}
-    {
-        let colVis: {[columnId: string]: boolean};
-
-        if (!columnVisibility) {
-            colVis = resolveColumnVisibility(columns);
-        }
-        else {
-            colVis = columnVisibility;
-        }
-
-        if (!_.isEmpty(this._columnVisibilityOverride))
-        {
-            // override the existing columnVisibility if an update needed after init
-            colVis = {...colVis, ...this._columnVisibilityOverride};
-
-            // reset the override content, so that we won't override again for the next call
-            // otherwise we would lose the user selection
-            this._columnVisibilityOverride = {};
-        }
-
-        return colVis;
     }
 }
