@@ -222,6 +222,9 @@ class LazyMobXTableStore<T> {
     @observable public downloadDataFetcher:IMobXApplicationLazyDownloadDataFetcher|undefined;
     @observable private highlightColor:string;
 
+    // keeps the state of the latest action (latest user selection)
+    private _columnVisibilityFromLatestAction:{[columnId: string]: boolean} = {};
+
     @computed public get itemsPerPage() {
         return this._itemsPerPage;
     }
@@ -546,10 +549,11 @@ class LazyMobXTableStore<T> {
         }
     }
 
-    @action public updateColumnVisibility(id:string, visible:boolean)
+    @action updateColumnVisibility(id:string, visible:boolean)
     {
         if (this._columnVisibility[id] !== undefined) {
             this._columnVisibility[id] = visible;
+            this._columnVisibilityFromLatestAction = {...this._columnVisibility};
         }
     }
 
@@ -567,10 +571,12 @@ class LazyMobXTableStore<T> {
             columnVisibility = props.columnVisibility;
         }
         // resolve visibility by column definition
-        // (in some cases this may reset the visibility to initial state and override the user selection.
-        // a custom columnVisibility prop or resolveColumnVisibility func is required to prevent this)
+        // if exists override with the state from the latest user selection
         else  {
-            columnVisibility = resolveColumnVisibility<T>(props.columns);
+            columnVisibility = {
+                ...resolveColumnVisibility<T>(props.columns),
+                ...this._columnVisibilityFromLatestAction
+            };
         }
 
         return columnVisibility;
@@ -647,6 +653,7 @@ export default class LazyMobXTable<T> extends React.Component<LazyMobXTableProps
 
     protected updateColumnVisibility(id: string, visible: boolean)
     {
+        // ignore undefined columns
         if (this.store.columnVisibility[id] !== undefined) {
             this.store.updateColumnVisibility(id, visible);
         }
@@ -672,11 +679,8 @@ export default class LazyMobXTable<T> extends React.Component<LazyMobXTableProps
                 };
             })(),
             visibilityToggle:(columnId: string):void => {
-                // ignore undefined columns
-                if (this.store.columnVisibility[columnId] !== undefined) {
-                    // toggle visibility
-                    this.updateColumnVisibility(columnId, !this.store.columnVisibility[columnId]);
-                }
+                // toggle visibility
+                this.updateColumnVisibility(columnId, !this.store.columnVisibility[columnId]);
             },
             changeItemsPerPage:(ipp:number)=>{
                 this.store.itemsPerPage=ipp;
