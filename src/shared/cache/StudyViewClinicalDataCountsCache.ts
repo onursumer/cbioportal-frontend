@@ -5,7 +5,7 @@ import _ from "lodash";
 import client from "../api/cbioportalClientInstance";
 import internalClient from "../api/cbioportalInternalClientInstance";
 import { ClinicalDataCount, StudyViewFilter } from "shared/api/generated/CBioPortalAPIInternal";
-import { NA_COLOR, COLORS, isFiltered } from "pages/studyView/StudyViewUtils";
+import {NA_COLOR, isFiltered, toHexColor} from "pages/studyView/StudyViewUtils";
 import { ClinicalDataCountWithColor } from "pages/studyView/StudyViewPageStore";
 
 type StudyViewClinicalDataCountsQuery = {
@@ -23,7 +23,6 @@ export default class StudyViewClinicalDataCountsCache extends MobxPromiseCache<S
                     let colors = this.colorCache[q.attribute.clinicalAttributeId + q.attribute.patientAttribute];
                     let result: ClinicalDataCount[] = [];
                     if (_.isUndefined(colors)) {
-                        let count = 0;
                         let studyIds = q.filters.studyIds || [];
                         if(_.isEmpty(studyIds)){
                             studyIds = _.keys(_.reduce(q.filters.sampleIdentifiers,(acc, next)=>{
@@ -40,11 +39,10 @@ export default class StudyViewClinicalDataCountsCache extends MobxPromiseCache<S
                             if (slice.value.toLowerCase().includes('na')) {
                                 acc[slice.value] = NA_COLOR;
                             } else {
-                                acc[slice.value] = COLORS[count];
-                                count += 1;
+                                acc[slice.value] = toHexColor(slice.value);
                             }
                             return acc;
-                        }, {})
+                        }, {});
                         this.colorCache[q.attribute.clinicalAttributeId + q.attribute.patientAttribute] = colors;
                     }
 
