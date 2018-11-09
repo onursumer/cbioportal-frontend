@@ -308,8 +308,7 @@ export default class ResultsViewPage extends React.Component<IResultsViewPagePro
             {
                 id:ResultsViewTab.CN_SEGMENTS,
                 hide:()=>{
-                    if (!this.resultsViewPageStore.samples.isComplete ||
-                        !this.resultsViewPageStore.studies.isComplete) {
+                    if (!this.resultsViewPageStore.studies.isComplete) {
                         return true;
                     } else {
                         const tooManyStudies = this.resultsViewPageStore.studies.result!.length > 1;

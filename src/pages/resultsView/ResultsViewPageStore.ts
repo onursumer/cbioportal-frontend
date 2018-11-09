@@ -5,6 +5,7 @@ import {
     ClinicalData,
     ClinicalDataMultiStudyFilter,
     ClinicalDataSingleStudyFilter,
+    CopyNumberSeg,
     Gene,
     GenePanel,
     GenePanelData,
@@ -39,6 +40,7 @@ import PdbHeaderCache from "shared/cache/PdbHeaderCache";
 import {
     cancerTypeForOncoKb,
     fetchCnaOncoKbDataWithNumericGeneMolecularData,
+    fetchCopyNumberSegmentsForSamples,
     fetchGenes,
     fetchGermlineConsentedSamples,
     fetchMyCancerGenomeData,
@@ -606,6 +608,13 @@ export class ResultsViewPageStore {
             return ret;
         }
     });
+
+    readonly cnSegments = remoteData<CopyNumberSeg[]>({
+        await: () => [
+            this.samples
+        ],
+        invoke: () => fetchCopyNumberSegmentsForSamples(this.samples.result)
+    }, []);
 
     readonly molecularData = remoteData<NumericGeneMolecularData[]>({
         await: () => [
