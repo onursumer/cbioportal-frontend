@@ -79,6 +79,7 @@ function initStore(appStore: AppStore, genes?: string) {
             const pathname = x[1];
 
 
+
             // escape from this if queryies are deeply equal
             // TODO: see if we can figure out why query is getting changed and
             // if there's any way to do shallow equality check to avoid this expensive operation
@@ -190,6 +191,7 @@ export default class ResultsViewPage extends React.Component<
 
     constructor(props: IResultsViewPageProps) {
         super(props);
+
 
         this.resultsViewPageStore = initStore(props.appStore);
 
