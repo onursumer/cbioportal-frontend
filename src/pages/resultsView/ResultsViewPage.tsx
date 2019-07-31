@@ -113,8 +113,7 @@ function initStore(appStore: AppStore, genes?: string) {
                         if(genes){
                             query.gene_list = genes;
                         }
-                        console.log("query.gene_list");
-                        console.log(query.gene_list);
+                        
                         const oql = decodeURIComponent(query.gene_list);
 
                         let samplesSpecification = parseSamplesSpecifications(
