@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { GnomadData, frequencyOutput} from '../mutationTable/column/GnomadColumnFormatter';
-import SimpleTable from '../simpleTable/SimpleTable';
+import SimpleTable from 'public-lib/components/simpleTable/SimpleTable';
 import styles from "shared/components/mutationTable/column/gnomad.module.scss";
 import DefaultTooltip from 'public-lib/components/defaultTooltip/DefaultTooltip';
 export interface IGnomadFrequencyTableProps

@@ -1,5 +1,5 @@
-import LazyMobXCache from "../lib/LazyMobXCache";
-import {AugmentedData} from "../lib/LazyMobXCache";
+import LazyMobXCache from "../../public-lib/lib/LazyMobXCache";
+import {AugmentedData} from "../../public-lib/lib/LazyMobXCache";
 import request from "superagent";
 import {PubMedRecord} from "../model/PubMedRecord";
 

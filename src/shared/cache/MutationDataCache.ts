@@ -1,5 +1,5 @@
 import client from "../api/cbioportalClientInstance";
-import LazyMobXCache, {AugmentedData} from "../lib/LazyMobXCache";
+import LazyMobXCache, {AugmentedData} from "../../public-lib/lib/LazyMobXCache";
 import {MolecularProfile, Mutation, MutationFilter} from "../api/generated/CBioPortalAPI";
 import {IDataQueryFilter} from "../lib/StoreUtils";
 import _ from "lodash";

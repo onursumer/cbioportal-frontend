@@ -1,4 +1,4 @@
-import LazyMobXCache from "../../../shared/lib/LazyMobXCache";
+import LazyMobXCache from "../../../public-lib/lib/LazyMobXCache";
 import {CopyNumberCount, CopyNumberCountIdentifier} from "shared/api/generated/CBioPortalAPI";
 import client from "shared/api/cbioportalClientInstance";
 

@@ -6,14 +6,21 @@ export {default as DownloadControls} from './components/downloadControls/Downloa
 export {default as EditableSpan} from './components/editableSpan/EditableSpan';
 export {default as EllipsisTextTooltip} from './components/ellipsisTextTooltip/EllipsisTextTooltip';
 export * from './components/HitZone';
+export {default as SimpleTable} from './components/simpleTable/SimpleTable';
 export {default as SVGAxis, Tick} from './components/SVGAxis';
 export {default as TableCellStatusIndicator, TableCellStatus} from './components/TableCellStatus';
 export {default as WindowWrapper} from './components/WindowWrapper';
 
 export {
     default as GenomeNexusAPI,
+    AlleleCount,
+    AlleleFrequency,
+    AlleleNumber,
     EnsemblFilter,
     GenomicLocation,
+    Gnomad,
+    Homozygotes,
+    MyVariantInfo,
     TranscriptConsequenceSummary,
     VariantAnnotation,
     VariantAnnotationSummary
@@ -37,6 +44,7 @@ export * from './lib/getCanonicalMutationType';
 export * from './lib/OncoKbUtils';
 export * from './lib/ProteinChangeUtils';
 export {default as SimpleCache, ICache, ICacheData} from "./lib/SimpleCache";
+export {default as LazyMobXCache, Cache, CacheData} from "./lib/LazyMobXCache";
 export * from './lib/SvgComponentUtils';
 export * from './lib/StringUtils';
 export * from './lib/TextTruncationUtils';

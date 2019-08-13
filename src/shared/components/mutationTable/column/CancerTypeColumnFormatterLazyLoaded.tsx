@@ -2,7 +2,7 @@ import * as React from "react";
 import LazyLoadedTableCell from "shared/lib/LazyLoadedTableCell";
 import {Mutation} from "../../../api/generated/CBioPortalAPI";
 import CancerTypeCache from "../../../cache/CancerTypeCache";
-import {CacheData} from "../../../lib/LazyMobXCache";
+import {CacheData} from "../../../../public-lib/lib/LazyMobXCache";
 
 export default class CancerTypeColumnFormatter {
 

@@ -2,7 +2,7 @@ import {fetchVariantAnnotationsByMutation} from "shared/lib/StoreUtils";
 import {extractGenomicLocation, genomicLocationString} from "shared/lib/MutationUtils";
 import {VariantAnnotation} from "public-lib/api/generated/GenomeNexusAPI";
 import {Mutation} from "shared/api/generated/CBioPortalAPI";
-import LazyMobXCache, {CacheData} from "shared/lib/LazyMobXCache";
+import LazyMobXCache, {CacheData} from "public-lib/lib/LazyMobXCache";
 import AppConfig from "appConfig";
 
 export type GenomeNexusCacheDataType = CacheData<VariantAnnotation>;

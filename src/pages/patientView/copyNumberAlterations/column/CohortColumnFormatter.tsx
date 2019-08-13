@@ -6,7 +6,7 @@ import {IGisticData, IGisticSummary} from "shared/model/Gistic";
 import {getPercentage} from "shared/lib/FormatUtils";
 
 import CopyNumberCountCache from "../../clinicalInformation/CopyNumberCountCache";
-import {CacheData} from "../../../../shared/lib/LazyMobXCache";
+import {CacheData} from "../../../../public-lib/lib/LazyMobXCache";
 import DefaultTooltip from "../../../../public-lib/components/defaultTooltip/DefaultTooltip";
 
 export default class CohortColumnFormatter

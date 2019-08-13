@@ -1,4 +1,4 @@
-import SimpleTable from "../simpleTable/SimpleTable";
+import SimpleTable from "public-lib/components/simpleTable/SimpleTable";
 import * as React from 'react';
 import {action, computed, IReactionDisposer, observable, reaction} from "mobx";
 import {observer, Observer} from "mobx-react";

@@ -1,4 +1,4 @@
-import LazyMobXCache from "./LazyMobXCache";
+import LazyMobXCache from "../../public-lib/lib/LazyMobXCache";
 export type SampleAndGene = {sampleId:string, entrezGeneId:number};
 
 export default class SampleGeneCache<T extends SampleAndGene> extends LazyMobXCache<T,SampleAndGene> {

@@ -1,4 +1,4 @@
-import LazyMobXCache from "../lib/LazyMobXCache";
+import LazyMobXCache from "../../public-lib/lib/LazyMobXCache";
 import {Geneset} from "../api/generated/CBioPortalAPIInternal";
 import internalClient from "../api/cbioportalInternalClientInstance";
 

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import './styles.scss';
-import { If, Then,  Else } from 'react-if';
 import classNames from 'classnames';
 import {observer} from "mobx-react";
 
@@ -9,7 +8,7 @@ interface ISimpleTableProps {
     rows:JSX.Element[];
     noRowsText?:string;
     className?:string;
-};
+}
 
 @observer
 export default class SimpleTable extends React.Component<ISimpleTableProps, {}> {

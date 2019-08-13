@@ -34,7 +34,7 @@ import {
 import onMobxPromise from "shared/lib/onMobxPromise";
 import getOverlappingStudies from "../../lib/getOverlappingStudies";
 import MolecularProfilesInStudyCache from "../../cache/MolecularProfilesInStudyCache";
-import {CacheData} from "../../lib/LazyMobXCache";
+import {CacheData} from "../../../public-lib/lib/LazyMobXCache";
 import {getHierarchyData} from "shared/lib/StoreUtils";
 import sessionServiceClient from "shared/api//sessionServiceInstance";
 import {VirtualStudy} from "shared/model/VirtualStudy";

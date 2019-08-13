@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import {AugmentedData, CacheData, default as LazyMobXCache} from "shared/lib/LazyMobXCache";
+import {AugmentedData, CacheData, default as LazyMobXCache} from "public-lib/lib/LazyMobXCache";
 import client from "shared/api/cbioportalClientInstance";
 import {DiscreteCopyNumberData, DiscreteCopyNumberFilter, MolecularProfile} from "shared/api/generated/CBioPortalAPI";
 

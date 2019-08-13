@@ -1,5 +1,5 @@
 import client from "shared/api/genomeNexusClientInstance";
-import LazyMobXCache from "shared/lib/LazyMobXCache";
+import LazyMobXCache from "public-lib/lib/LazyMobXCache";
 import {PdbHeader} from "public-lib/api/generated/GenomeNexusAPI";
 
 function fetch(pdbIds:string[]):Promise<PdbHeader[]> {

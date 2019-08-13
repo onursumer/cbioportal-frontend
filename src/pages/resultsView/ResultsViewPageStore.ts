@@ -64,7 +64,7 @@ import {stringListToSet} from "../../public-lib/lib/StringUtils";
 import {toSampleUuid} from "../../shared/lib/UuidUtils";
 import MutationDataCache from "../../shared/cache/MutationDataCache";
 import AccessorsForOqlFilter, {SimplifiedMutationType} from "../../shared/lib/oql/AccessorsForOqlFilter";
-import {AugmentedData, CacheData} from "../../shared/lib/LazyMobXCache";
+import {AugmentedData, CacheData} from "../../public-lib/lib/LazyMobXCache";
 import {PatientSurvival} from "../../shared/model/PatientSurvival";
 import {
     doesQueryContainMutationOQL,

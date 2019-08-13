@@ -4,7 +4,7 @@ import chaiEnzyme from 'chai-enzyme';
 import {shallow, mount, ReactWrapper} from 'enzyme';
 import sinon from 'sinon';
 import {lazyMobXTableSort, default as LazyMobXTable, Column} from "./LazyMobXTable";
-import SimpleTable from "../simpleTable/SimpleTable";
+import SimpleTable from "../../../public-lib/components/simpleTable/SimpleTable";
 import DefaultTooltip from "../../../public-lib/components/defaultTooltip/DefaultTooltip";
 import expect from 'expect';
 import expectJSX from 'expect-jsx';

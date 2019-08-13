@@ -1,4 +1,4 @@
-import LazyMobXCache, {AugmentedData} from "../lib/LazyMobXCache";
+import LazyMobXCache, {AugmentedData} from "../../public-lib/lib/LazyMobXCache";
 import {GenesetMolecularData, GenesetDataFilterCriteria} from "../api/generated/CBioPortalAPIInternal";
 import client from "shared/api/cbioportalInternalClientInstance";
 import _ from "lodash";

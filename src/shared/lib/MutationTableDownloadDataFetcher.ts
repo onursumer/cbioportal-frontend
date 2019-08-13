@@ -1,6 +1,6 @@
 import MobxPromise from "mobxpromise";
 import {ILazyMobXTableApplicationLazyDownloadDataFetcher} from "shared/lib/ILazyMobXTableApplicationLazyDownloadDataFetcher";
-import LazyMobXCache from "shared/lib/LazyMobXCache";
+import LazyMobXCache from "public-lib/lib/LazyMobXCache";
 import {default as MutationCountCache, fetch as fetchMutationCountData} from "shared/cache/MutationCountCache";
 import {default as GenomeNexusCache, fetch as fetchGenomeNexusData } from "shared/cache/GenomeNexusCache";
 import {default as DiscreteCNACache, fetch as fetchDiscreteCNAData} from "shared/cache/DiscreteCNACache";

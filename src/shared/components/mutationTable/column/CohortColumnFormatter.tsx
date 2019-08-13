@@ -6,7 +6,7 @@ import FrequencyBar from "shared/components/cohort/FrequencyBar";
 import Icon from "shared/components/cohort/LetterIcon";
 import {IMutSigData as MutSigData} from "shared/model/MutSig";
 import {VariantCount} from "shared/api/generated/CBioPortalAPIInternal";
-import {CacheData} from "shared/lib/LazyMobXCache";
+import {CacheData} from "public-lib/lib/LazyMobXCache";
 import {getPercentage} from "shared/lib/FormatUtils";
 import {default as TableCellStatusIndicator, TableCellStatus} from "public-lib/components/TableCellStatus";
 

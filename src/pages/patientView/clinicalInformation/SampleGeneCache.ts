@@ -1,7 +1,7 @@
 import {observable, action} from "mobx";
 import Immutable from "seamless-immutable";
 import * as _ from "lodash";
-import accumulatingDebounce from "../../../shared/lib/accumulatingDebounce";
+import accumulatingDebounce from "../../../public-lib/lib/accumulatingDebounce";
 
 export type CacheData<T> = { status: "complete", data: T | null} | { status: "error", data:null};
 export type Cache<T> = {
