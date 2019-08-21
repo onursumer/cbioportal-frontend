@@ -483,7 +483,10 @@ export function getAlterationData(
         sequencedPatientKeysByGene
     );
     if(isQueriedGeneSampling || !queryGenes.map(gene => (gene.hugoGeneSymbol)).includes((oql as any).gene)){
-        alterationFrequencyData.push({gene: (oql as any).gene, altered: alterationInfo.altered, sequenced: alterationInfo.sequenced, percentAltered: alterationInfo.percent});
+        alterationFrequencyData.push({gene: (oql as any).gene, 
+                                      altered: alterationInfo.altered,
+                                      sequenced: alterationInfo.sequenced,
+                                      percentAltered: alterationInfo.percent});
     }
 }
 
