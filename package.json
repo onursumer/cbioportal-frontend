@@ -183,7 +183,7 @@
     "object-sizeof": "^1.2.0",
     "oncoprintjs": "4.1.8",
     "parameter-validator": "^1.0.2",
-    "pathway-mapper": "github:onursumer/pathway-mapper#ed0b6fa27b44312ee782eede5fbe6e2bf381dfed",
+    "pathway-mapper": "github:onursumer/pathway-mapper#450e936c2681e3a5e05c5625e1fd05fff5692ec4",
     "pdfobject": "^2.0.201604172",
     "pegjs": "^0.10.0",
     "plotly.js": "^1.42.5",
