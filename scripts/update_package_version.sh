@@ -10,6 +10,12 @@
 # Prompt changed packages to manually set the new version
 
 if [[ "$GITHUB_RUN_ID" ]]; then
+  # do not attempt versioning if the NODE_AUTH_TOKEN is missing
+  if [[ -z "$NODE_AUTH_TOKEN" ]]; then
+    echo "NODE_AUTH_TOKEN not found, terminating workflow"
+    exit 1
+  fi
+
   # configure git to be able to push version changes and tags
   git config --local user.email "LernaPublishBot@GithubActions.com"
   git config --local user.name "Lerna Publish Bot"
