@@ -1,21 +1,28 @@
 import * as React from 'react';
 import * as _ from 'lodash';
 import { If } from 'react-if';
-import Tracks from './Tracks';
 import { ThumbnailExpandVAFPlot } from '../vafPlot/ThumbnailExpandVAFPlot';
 import {
     ClinicalDataBySampleId,
+    CopyNumberSeg,
     Mutation,
     Sample,
 } from 'cbioportal-ts-api-client';
 import SampleManager from '../SampleManager';
 import { MutationFrequenciesBySample } from '../vafPlot/VAFPlot';
 import { computed } from 'mobx';
+import IntegrativeGenomicsViewer from 'shared/components/igv/IntegrativeGenomicsViewer';
 import {
     sampleIdToIconData,
     IKeyedIconData,
     genePanelIdToIconData,
 } from './GenomicOverviewUtils';
+import {
+    calcSegmentTrackHeight,
+    defaultSegmentTrackProps,
+    generateSegmentFeatures,
+    WHOLE_GENOME,
+} from 'shared/lib/IGVUtils';
 
 interface IGenomicOverviewProps {
     mergedMutations: Mutation[][];
@@ -30,12 +37,17 @@ interface IGenomicOverviewProps {
     sampleIdToCopyNumberGenePanelId?: { [sampleId: string]: string };
     onSelectGenePanel?: (name: string) => void;
     disableTooltip?: boolean;
+    locus?: string;
 }
 
 export default class GenomicOverview extends React.Component<
     IGenomicOverviewProps,
     { frequencies: MutationFrequenciesBySample }
 > {
+    public static defaultProps: Partial<IGenomicOverviewProps> = {
+        locus: WHOLE_GENOME,
+    };
+
     constructor(props: IGenomicOverviewProps) {
         super(props);
     }
@@ -73,6 +85,72 @@ export default class GenomicOverview extends React.Component<
         );
     }
 
+    // TODO figure out how to refactor recently added props (need to move the logic out of legacy tracks):
+    //  mutationGenePanelIconData, copyNumberGenePanelIconData, and onSelectGenePanel.
+    //
+    // <Tracks
+    //     mutations={_.flatten(this.props.mergedMutations)}
+    //     key={Math.random() /* Force remounting on every render */}
+    //     sampleManager={this.props.sampleManager}
+    //     width={this.getTracksWidth()}
+    //     cnaSegments={this.props.cnaSegments}
+    //     samples={this.props.samples}
+    //     mutationGenePanelIconData={
+    //         this.sampleIdToMutationGenePanelIconData
+    //     }
+    //     copyNumberGenePanelIconData={
+    //         this.sampleIdToCopyNumberGenePanelIconData
+    //     }
+    //     onSelectGenePanel={this.props.onSelectGenePanel}
+    // />
+    public get tracks() {
+        const tracks: any[] = [];
+
+        if (this.props.cnaSegments.length > 0) {
+            // sort segments by sample order
+            const segFeatures = generateSegmentFeatures(
+                this.props.cnaSegments.sort(
+                    (a: CopyNumberSeg, b: CopyNumberSeg) =>
+                        this.props.sampleOrder[a.sampleId] -
+                        this.props.sampleOrder[b.sampleId]
+                )
+            );
+
+            const segHeight = calcSegmentTrackHeight(segFeatures);
+
+            tracks.push({
+                ...defaultSegmentTrackProps(),
+                height: segHeight,
+                features: segFeatures,
+            });
+        }
+
+        // TODO enable this for mutation track
+        // if (this.props.mergedMutations.length > 0) {
+        //     const mutFeatures = _.flatten(this.props.mergedMutations).map(mutation => ({
+        //         // TODO sampleKey: mutation.uniqueSampleKey,
+        //         sample: mutation.sampleId,
+        //         chr: mutation.gene.chromosome,
+        //         start: mutation.startPosition,
+        //         end: mutation.endPosition,
+        //         proteinChange: mutation.proteinChange,
+        //         mutationType: mutation.mutationType,
+        //         color: getColorForProteinImpactType([mutation])
+        //     }));
+        //
+        //     tracks.push({
+        //         type: "annotation",
+        //         visibilityWindow: 3088286401,
+        //         displayMode: "FILL",
+        //         name: "MUT",
+        //         height: 25,
+        //         features: mutFeatures
+        //     });
+        // }
+
+        return tracks;
+    }
+
     public render() {
         const labels = _.reduce(
             this.props.sampleManager.samples,
@@ -85,21 +163,12 @@ export default class GenomicOverview extends React.Component<
 
         return (
             <div style={{ display: 'flex' }}>
-                <Tracks
-                    mutations={_.flatten(this.props.mergedMutations)}
-                    key={Math.random() /* Force remounting on every render */}
-                    sampleManager={this.props.sampleManager}
-                    width={this.getTracksWidth()}
-                    cnaSegments={this.props.cnaSegments}
-                    samples={this.props.samples}
-                    mutationGenePanelIconData={
-                        this.sampleIdToMutationGenePanelIconData
-                    }
-                    copyNumberGenePanelIconData={
-                        this.sampleIdToCopyNumberGenePanelIconData
-                    }
-                    onSelectGenePanel={this.props.onSelectGenePanel}
-                />
+                <span style={{ width: this.getTracksWidth() }}>
+                    <IntegrativeGenomicsViewer
+                        tracks={this.tracks}
+                        locus={this.props.locus}
+                    />
+                </span>
                 <If condition={this.shouldShowVAFPlot()}>
                     <ThumbnailExpandVAFPlot
                         data={this.frequencies}

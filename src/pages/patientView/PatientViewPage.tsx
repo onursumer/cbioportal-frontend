@@ -111,6 +111,7 @@ export default class PatientViewPage extends React.Component<
         | { [columnId: string]: boolean }
         | undefined;
     @observable genePanelModal = { genePanelId: '', isOpen: false };
+    @observable private activeLocus: string | undefined;
 
     // use this wrapper rather than interacting with the url directly
     @observable
@@ -235,6 +236,11 @@ export default class PatientViewPage extends React.Component<
         } else {
             this.urlWrapper.updateURL({ caseId: id, sampleId: undefined });
         }
+    }
+
+    @autobind
+    private handleCNATableGeneClick(hugoGeneSymbol: string) {
+        this.activeLocus = hugoGeneSymbol;
     }
 
     @computed get cnaTableStatus() {
@@ -980,6 +986,7 @@ export default class PatientViewPage extends React.Component<
                                                         this.genePanelModal
                                                             .isOpen
                                                     }
+                                                    locus={this.activeLocus}
                                                 />
                                                 <hr />
                                             </div>
@@ -1377,6 +1384,10 @@ export default class PatientViewPage extends React.Component<
                                                     disableTooltip={
                                                         this.genePanelModal
                                                             .isOpen
+                                                    }
+                                                    onGeneClick={
+                                                        this
+                                                            .handleCNATableGeneClick
                                                     }
                                                 />
                                             </div>

@@ -6,7 +6,6 @@ import LazyMobXTable from 'shared/components/lazyMobXTable/LazyMobXTable';
 import {
     CancerStudy,
     DiscreteCopyNumberData,
-    Gene,
     ReferenceGenomeGene,
 } from 'cbioportal-ts-api-client';
 import { Column } from 'shared/components/lazyMobXTable/LazyMobXTable';
@@ -61,6 +60,7 @@ type ICopyNumberTableWrapperProps = {
     currentGeneFilter: GeneFilterOption;
     onFilterGenes?: (option: GeneFilterOption) => void;
     onSelectGenePanel?: (name: string) => void;
+    onGeneClick?: (hugoSymbol: string) => void;
     disableTooltip?: boolean;
 };
 
@@ -127,7 +127,14 @@ export default class CopyNumberTableWrapper extends React.Component<
         columns.push({
             name: 'Gene',
             render: (d: DiscreteCopyNumberData[]) => (
-                <span data-test="cna-table-gene-column">
+                <span
+                    data-test="cna-table-gene-column"
+                    onClick={() =>
+                        this.props.onGeneClick &&
+                        this.props.onGeneClick(d[0].gene.hugoGeneSymbol)
+                    }
+                    style={{ cursor: 'pointer' }}
+                >
                     {d[0].gene.hugoGeneSymbol}
                 </span>
             ),
