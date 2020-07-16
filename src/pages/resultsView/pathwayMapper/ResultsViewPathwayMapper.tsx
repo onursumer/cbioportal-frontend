@@ -3,7 +3,9 @@ import _ from 'lodash';
 import { ResultsViewPageStore } from '../ResultsViewPageStore';
 import { addGenesToQuery, ResultsViewTab } from '../ResultsViewPageHelpers';
 import 'pathway-mapper/dist/base.css';
-import PathwayMapperTable, { IPathwayMapperTable } from './PathwayMapperTable';
+import PathwayMapperTable, {
+    IPathwayMapperTable,
+} from '../../../shared/lib/pathwayMapper/PathwayMapperTable';
 import { observer } from 'mobx-react';
 import autobind from 'autobind-decorator';
 import {
@@ -247,6 +249,8 @@ export default class ResultsViewPathwayMapper extends React.Component<
                                 tableComponent={this.renderTable}
                                 validGenes={this.validGenes}
                                 toast={toast}
+                                //messageBanner Patch will be removed
+                                messageBanner={this.renderBanner}
                             />
                             <ToastContainer
                                 closeButton={<i className="fa fa-times" />}
@@ -353,7 +357,11 @@ export default class ResultsViewPathwayMapper extends React.Component<
             });
         }, 2000);
     }
-
+    //will be removed when banner is added
+    @autobind
+    private renderBanner() {
+        return null;
+    }
     @autobind
     private renderTable(
         data: IPathwayMapperTable[],
