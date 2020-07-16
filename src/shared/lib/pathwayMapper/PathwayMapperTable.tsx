@@ -20,7 +20,7 @@ export interface IPathwayMapperTable {
     genes: string[];
 }
 
-enum IPathwayMapperTableColumnType {
+export enum IPathwayMapperTableColumnType {
     NAME,
     SCORE,
     GENES,
@@ -31,6 +31,9 @@ interface IPathwayMapperTableProps {
     selectedPathway: string;
     changePathway: (pathway: string) => void;
     initialSortColumn?: string;
+    columnsOverride: {
+        [columnEnum: number]: Partial<PathwayMapperTableColumn>;
+    };
 }
 
 type PathwayMapperTableColumn = Column<IPathwayMapperTable>;
@@ -70,6 +73,7 @@ export default class PathwayMapperTable extends React.Component<
             IPathwayMapperTableColumnType.SCORE,
             IPathwayMapperTableColumnType.GENES,
         ],
+        columnsOverride: { [IPathwayMapperTableColumnType.SCORE]: {} },
         initialSortColumn: 'Score',
     };
     @observable protected _columns: {
@@ -84,6 +88,8 @@ export default class PathwayMapperTable extends React.Component<
     }
 
     generateColumns() {
+        //this condition is used to set the label of the score column
+
         const lengthThreshold = 20;
 
         this._columns = {};
@@ -133,6 +139,7 @@ export default class PathwayMapperTable extends React.Component<
                 </span>
             ),
             tooltip: <span>Score</span>,
+
             filter: (
                 d: IPathwayMapperTable,
                 filterString: string,
@@ -140,6 +147,8 @@ export default class PathwayMapperTable extends React.Component<
             ) => (d.score + '').includes(filterStringUpper),
             sortBy: (d: IPathwayMapperTable) => d.score,
             download: (d: IPathwayMapperTable) => d.score + '',
+
+            ...this.props.columnsOverride[IPathwayMapperTableColumnType.SCORE],
         };
 
         this._columns[IPathwayMapperTableColumnType.GENES] = {
