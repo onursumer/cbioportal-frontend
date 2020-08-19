@@ -18,7 +18,9 @@ export * from './model/Mutation';
 export * from './model/MyCancerGenome';
 export * from './model/MyVariantInfo';
 export * from './model/OncoKB';
+export * from './model/PostTranslationalModification';
 export * from './model/RemoteData';
+export * from './model/Uniprot';
 
 export * from './mutation/MutationAnnotator';
 export * from './mutation/MutationUtils';
@@ -29,3 +31,5 @@ export * from './myCancerGenome/MyCancerGenomeUtils';
 export * from './oncokb/OncoKbUtils';
 
 export * from './promise/PromiseUtils';
+
+export * from './ptm/PtmUtils';

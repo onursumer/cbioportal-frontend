@@ -13,7 +13,6 @@ import {
     Hotspot,
     MyVariantInfo,
     PfamDomain,
-    PostTranslationalModification,
     VariantAnnotation,
 } from 'genome-nexus-ts-api-client';
 import {
@@ -22,6 +21,7 @@ import {
     OncoKBInfo,
 } from 'oncokb-ts-api-client';
 import DataStore from './DataStore';
+import { PostTranslationalModification } from './PostTranslationalModification';
 
 export interface MutationMapperStore {
     gene: Gene;
@@ -44,6 +44,7 @@ export interface MutationMapperStore {
         group: string;
         counts: { [pos: number]: number };
     }[];
+    ptmData: RemoteData<PostTranslationalModification[] | undefined>;
     ptmDataByProteinPosStart: RemoteData<
         { [pos: number]: PostTranslationalModification[] } | undefined
     >;
@@ -76,6 +77,7 @@ export interface MutationMapperStore {
     mutationsByTranscriptId: { [transcriptId: string]: Mutation[] };
     setSelectedTranscript?: (id: string | undefined) => void;
     getTranscriptId?: () => string | undefined;
+    ptmSource?: string;
 }
 
 export default MutationMapperStore;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { observer } from 'mobx-react';
 import { computed } from 'mobx';
-import { MobxCache } from 'cbioportal-utils';
+import { MobxCache, PTM_SOURCE_URL } from 'cbioportal-utils';
 
 import MutationMapperStore from '../../model/MutationMapperStore';
 import { TrackName, TrackVisibility } from './TrackSelector';
@@ -81,6 +81,12 @@ export default class TrackPanel extends React.Component<TrackPanelProps, {}> {
                         width={this.props.geneWidth}
                         xOffset={this.props.geneXOffset}
                         proteinLength={this.proteinLength}
+                        dataSource={this.props.store.ptmSource}
+                        dataSourceUrl={
+                            this.props.store.ptmSource
+                                ? PTM_SOURCE_URL[this.props.store.ptmSource]
+                                : undefined
+                        }
                     />
                 ) : null,
         };

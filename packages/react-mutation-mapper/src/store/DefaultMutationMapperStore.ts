@@ -2,6 +2,8 @@ import autobind from 'autobind-decorator';
 import { remoteData } from 'cbioportal-frontend-commons';
 import {
     AggregatedHotspots,
+    convertDbPtmToPtm,
+    convertUniprotFeatureToPtm,
     defaultHotspotFilter,
     genomicLocationString,
     getMyCancerGenomeData,
@@ -9,6 +11,8 @@ import {
     groupHotspotsByMutations,
     getMutationsByTranscriptId,
     groupMutationsByProteinStartPos,
+    groupPtmDataByPosition,
+    groupPtmDataByTypeAndPosition,
     indexHotspotsData,
     ICivicGene,
     ICivicVariant,
@@ -17,6 +21,9 @@ import {
     IOncoKbData,
     fetchCivicGenes,
     fetchCivicVariants,
+    PostTranslationalModification,
+    PtmSource,
+    UniprotFeature,
     uniqueGenomicLocations,
 } from 'cbioportal-utils';
 import { Gene, Mutation, IMyVariantInfoIndex } from 'cbioportal-utils';
@@ -32,7 +39,8 @@ import {
     Hotspot,
     PfamDomain,
     PfamDomainRange,
-    PostTranslationalModification,
+    PostTranslationalModification as DbPtm,
+    // TODO UniprotFeature, UniprotFeatureList
     VariantAnnotation,
 } from 'genome-nexus-ts-api-client';
 import _ from 'lodash';
@@ -57,10 +65,6 @@ import {
     defaultOncoKbIndicatorFilter,
     groupOncoKbIndicatorDataByMutations,
 } from '../util/OncoKbUtils';
-import {
-    groupPtmDataByPosition,
-    groupPtmDataByTypeAndPosition,
-} from '../util/PtmUtils';
 import { DefaultMutationMapperDataStore } from './DefaultMutationMapperDataStore';
 import { DefaultMutationMapperDataFetcher } from './DefaultMutationMapperDataFetcher';
 import { DefaultMutationMapperFilterApplier } from './DefaultMutationMapperFilterApplier';
@@ -68,6 +72,7 @@ import { DefaultMutationMapperFilterApplier } from './DefaultMutationMapperFilte
 interface DefaultMutationMapperStoreConfig {
     annotationFields?: string[];
     isoformOverrideSource?: string;
+    ptmSource?: string;
     filterMutationsBySelectedTranscript?: boolean;
     genomeNexusUrl?: string;
     oncoKbUrl?: string;
@@ -166,6 +171,11 @@ class DefaultMutationMapperStore implements MutationMapperStore {
     @computed
     public get isoformOverrideSource(): string {
         return this.config.isoformOverrideSource || 'uniprot';
+    }
+
+    @computed
+    public get ptmSource(): string {
+        return this.config.ptmSource || PtmSource.Uniprot;
     }
 
     @computed
@@ -650,9 +660,75 @@ class DefaultMutationMapperStore implements MutationMapperStore {
 
     readonly ptmData: MobxPromise<PostTranslationalModification[]> = remoteData(
         {
+            await: () => {
+                const waitList = [];
+
+                if (this.ptmSource === PtmSource.Uniprot) {
+                    waitList.push(this.uniprotPtmData);
+                } else if (this.ptmSource === PtmSource.Uniprot) {
+                    waitList.push(this.dbPtmData);
+                }
+
+                return waitList;
+            },
+            invoke: () => {
+                let data: PostTranslationalModification[] = [];
+
+                if (
+                    this.ptmSource === PtmSource.Uniprot &&
+                    this.uniprotPtmData.result
+                ) {
+                    data = this.uniprotPtmData.result.map(
+                        convertUniprotFeatureToPtm
+                    );
+                } else if (
+                    this.ptmSource === PtmSource.dbPTM &&
+                    this.dbPtmData.result
+                ) {
+                    data = this.dbPtmData.result.map(convertDbPtmToPtm);
+                }
+
+                return Promise.resolve(data);
+            },
+            onError: () => {
+                // fail silently
+            },
+        }
+    );
+
+    readonly uniprotPtmData: MobxPromise<UniprotFeature[]> = remoteData(
+        {
+            await: () => [
+                this.mutationData,
+                this.activeTranscript,
+                this.swissProtId,
+            ],
+            invoke: async () => {
+                if (this.activeTranscript.result && this.swissProtId.result) {
+                    // TODO we need to update genome nexus for this one to work,
+                    //  for now we are getting the data directly from uniprot API
+                    // return this.dataFetcher.fetchPtmData(
+                    //     this.activeTranscript.result
+                    // );
+                    return this.dataFetcher.fetchUniprotFeatures(
+                        this.swissProtId.result
+                    );
+                } else {
+                    return [];
+                }
+            },
+            onError: () => {
+                // fail silently
+            },
+        },
+        []
+    );
+
+    readonly dbPtmData: MobxPromise<DbPtm[]> = remoteData(
+        {
             await: () => [this.mutationData, this.activeTranscript],
             invoke: async () => {
-                if (this.activeTranscript.result) {
+                if (this.activeTranscript.result && this.swissProtId.result) {
                     return this.dataFetcher.fetchPtmData(
                         this.activeTranscript.result
                     );
@@ -724,9 +800,9 @@ class DefaultMutationMapperStore implements MutationMapperStore {
         {
             await: () => [this.cancerHotspotsData],
             invoke: async () =>
-                this.ptmData.result
+                this.cancerHotspotsData.result
                     ? groupCancerHotspotDataByPosition(
-                          this.cancerHotspotsData.result!
+                          this.cancerHotspotsData.result
                       )
                     : {},
         },

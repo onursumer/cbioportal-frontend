@@ -53,7 +53,7 @@ import {
 
 import { IMutationMapperConfig } from './MutationMapperConfig';
 import autobind from 'autobind-decorator';
-import { normalizeMutation, normalizeMutations } from './MutationMapperUtils';
+import { normalizeMutations } from './MutationMapperUtils';
 import { getOncoKbApiUrl } from 'shared/api/urls';
 import {
     ONCOKB_DEFAULT_INFO,
@@ -62,6 +62,8 @@ import {
 
 export interface IMutationMapperStoreConfig {
     filterMutationsBySelectedTranscript?: boolean;
+    // TODO make ptmSource part of AppConfig? (IMutationMapperConfig)
+    ptmSource?: string;
 }
 
 export default class MutationMapperStore extends DefaultMutationMapperStore {
@@ -88,6 +90,7 @@ export default class MutationMapperStore extends DefaultMutationMapperStore {
             {
                 isoformOverrideSource:
                     mutationMapperConfig.isoformOverrideSource,
+                ptmSource: mutationMapperStoreConfig.ptmSource,
                 filterMutationsBySelectedTranscript:
                     mutationMapperStoreConfig.filterMutationsBySelectedTranscript,
                 enableCivic: mutationMapperConfig.show_civic,

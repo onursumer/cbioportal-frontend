@@ -8,11 +8,14 @@ import {
     DefaultTooltip,
     EllipsisTextTooltip,
 } from 'cbioportal-frontend-commons';
-import { MobxCache } from 'cbioportal-utils';
-import { PostTranslationalModification } from 'genome-nexus-ts-api-client';
+import {
+    compareByPtmTypePriority,
+    ptmColor,
+    MobxCache,
+    PostTranslationalModification,
+} from 'cbioportal-utils';
 
 import MutationMapperStore from '../../model/MutationMapperStore';
-import { compareByPtmTypePriority, ptmColor } from '../../util/PtmUtils';
 import PtmAnnotationTable from '../ptm/PtmAnnotationTable';
 import { default as Track, TrackProps } from './Track';
 import { TrackItemSpec } from './TrackCircle';
@@ -24,6 +27,8 @@ type PtmTrackProps = TrackProps & {
     pubMedCache?: MobxCache;
     ensemblTranscriptId?: string;
     subTrackMargin?: number;
+    dataSource?: string;
+    dataSourceUrl?: string;
 };
 
 export function ptmTooltip(
@@ -33,7 +38,28 @@ export function ptmTooltip(
     return <PtmAnnotationTable data={ptms} pubMedCache={pubMedCache} />;
 }
 
-export function ptmInfoTooltip(transcriptId?: string) {
+export function ptmInfoTooltip(
+    transcriptId?: string,
+    dataSource?: string,
+    dataSourceUrl?: string
+) {
+    let dataSourceDiv = null;
+
+    if (dataSource) {
+        dataSourceDiv = (
+            <div>
+                Data Source:{' '}
+                {dataSourceUrl ? (
+                    <a href={dataSourceUrl} target="_blank">
+                        {dataSource}
+                    </a>
+                ) : (
+                    dataSource
+                )}
+            </div>
+        );
+    }
+
     return (
         <div style={{ maxWidth: 400 }}>
             <p>
@@ -67,12 +93,7 @@ export function ptmInfoTooltip(transcriptId?: string) {
                     </li>
                 </ul>
             </p>
-            <div>
-                Data Source:{' '}
-                <a href="http://dbptm.mbc.nctu.edu.tw/" target="_blank">
-                    dbPTM
-                </a>
-            </div>
+            {dataSourceDiv}
         </div>
     );
 }
@@ -149,7 +170,11 @@ export default class PtmTrack extends React.Component<PtmTrackProps, {}> {
                 <DefaultTooltip
                     placement="left"
                     overlay={() =>
-                        ptmInfoTooltip(this.props.ensemblTranscriptId)
+                        ptmInfoTooltip(
+                            this.props.ensemblTranscriptId,
+                            this.props.dataSource,
+                            this.props.dataSourceUrl
+                        )
                     }
                     destroyTooltipOnHide={true}
                 >
