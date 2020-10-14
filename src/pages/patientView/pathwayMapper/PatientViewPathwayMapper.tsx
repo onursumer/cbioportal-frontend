@@ -1,7 +1,6 @@
 import * as React from 'react';
 import _ from 'lodash';
 import { PatientViewPageStore } from '../clinicalInformation/PatientViewPageStore';
-import { PatientViewPageTabs } from '../PatientViewPageTabs';
 import 'pathway-mapper/dist/base.css';
 import PathwayMapperTable, {
     IPathwayMapperTable,
@@ -9,27 +8,21 @@ import PathwayMapperTable, {
 } from '../../../shared/lib/pathwayMapper/PathwayMapperTable';
 import { observer } from 'mobx-react';
 import autobind from 'autobind-decorator';
-import {
-    observable,
-    computed,
-    action,
-    reaction,
-    IReactionDisposer,
-} from 'mobx';
+import { observable, computed, action } from 'mobx';
 import { Row } from 'react-bootstrap';
 
 import { AppStore } from 'AppStore';
 import { remoteData } from 'cbioportal-frontend-commons';
-import { fetchGenes, mergeDiscreteCNAData } from 'shared/lib/StoreUtils';
+import { fetchGenes } from 'shared/lib/StoreUtils';
 import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import PatientViewUrlWrapper from '../PatientViewUrlWrapper';
+import { getGeneticTrackRuleSetParams } from 'shared/components/oncoprint/OncoprintUtils';
+import PathwayMapper, { ICBioData } from 'pathway-mapper';
 
 import 'cytoscape-panzoom/cytoscape.js-panzoom.css';
 import 'cytoscape-navigator/cytoscape.js-navigator.css';
 import 'react-toastify/dist/ReactToastify.css';
-import styles from './pathwayMapper.module.scss';
-import PathwayMapper, { ICBioData } from 'pathway-mapper';
 
 const alterationFrequencyData: ICBioData[] = [];
 
@@ -38,6 +31,9 @@ interface IPatientViewPathwayMapperProps {
     appStore: AppStore;
     urlWrapper: PatientViewUrlWrapper;
 }
+
+const DEFAULT_RULESET_PARAMS = getGeneticTrackRuleSetParams(true, true, true);
+
 @observer
 export default class PatientViewPathwayMapper extends React.Component<
     IPatientViewPathwayMapperProps
@@ -92,6 +88,12 @@ export default class PatientViewPathwayMapper extends React.Component<
                     altered: 1,
                     sequenced: 1,
                     percentAltered: altData[0].mutationType,
+                    geneticTrackRuleSetParams: DEFAULT_RULESET_PARAMS,
+                    geneticTrackData: this.props.store.geneticTrackData.result
+                        ? this.props.store.geneticTrackData.result[
+                              altData[0].gene.hugoGeneSymbol
+                          ]
+                        : undefined,
                 };
                 if (mutationType) {
                     alterationFrequencyData.push(mutationType);
@@ -106,6 +108,12 @@ export default class PatientViewPathwayMapper extends React.Component<
                     altered: 1,
                     sequenced: 1,
                     percentAltered: this.getCNAtypes(altData[0].alteration),
+                    geneticTrackRuleSetParams: DEFAULT_RULESET_PARAMS,
+                    geneticTrackData: this.props.store.geneticTrackData.result
+                        ? this.props.store.geneticTrackData.result[
+                              altData[0].gene.hugoGeneSymbol
+                          ]
+                        : undefined,
                 };
                 if (cna) {
                     alterationFrequencyData.push(cna);
@@ -151,7 +159,6 @@ export default class PatientViewPathwayMapper extends React.Component<
             this.getQueryGenes(this.alterationFrequencyData);
         }
         if (!this.PathwayMapperComponent) {
-            console.log('PATHWAY COMPONENT CANNOT BE CREATED');
             return null;
         }
         return (
