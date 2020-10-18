@@ -31,7 +31,7 @@ interface IPathwayMapperTableProps {
     selectedPathway: string;
     changePathway: (pathway: string) => void;
     initialSortColumn?: string;
-    columnsOverride: {
+    columnsOverride?: {
         [columnEnum: number]: Partial<PathwayMapperTableColumn>;
     };
 }
@@ -73,7 +73,7 @@ export default class PathwayMapperTable extends React.Component<
             IPathwayMapperTableColumnType.SCORE,
             IPathwayMapperTableColumnType.GENES,
         ],
-        columnsOverride: { [IPathwayMapperTableColumnType.SCORE]: {} },
+        columnsOverride: { columns: {} },
         initialSortColumn: 'Score',
     };
     @observable protected _columns: {
@@ -148,7 +148,7 @@ export default class PathwayMapperTable extends React.Component<
             sortBy: (d: IPathwayMapperTable) => d.score,
             download: (d: IPathwayMapperTable) => d.score + '',
 
-            ...this.props.columnsOverride[IPathwayMapperTableColumnType.SCORE],
+            ...this.props.columnsOverride![IPathwayMapperTableColumnType.SCORE],
         };
 
         this._columns[IPathwayMapperTableColumnType.GENES] = {

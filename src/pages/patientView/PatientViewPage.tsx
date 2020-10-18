@@ -1467,7 +1467,9 @@ export default class PatientViewPage extends React.Component<
                                     linkText={'Pathways'}
                                 >
                                     {this.patientViewPageStore.geneticTrackData
-                                        .isComplete ? (
+                                        .isComplete &&
+                                    this.patientViewPageStore
+                                        .mergedMutationDataIncludingUncalledFilteredByGene ? (
                                         <PatientViewPathwayMapper
                                             store={this.patientViewPageStore}
                                             appStore={this.props.appStore}
