@@ -23,7 +23,6 @@ import PathwayMapper, { ICBioData } from 'pathway-mapper';
 import 'cytoscape-panzoom/cytoscape.js-panzoom.css';
 import 'cytoscape-navigator/cytoscape.js-navigator.css';
 import 'react-toastify/dist/ReactToastify.css';
-import { buildCBioLink } from 'shared/api/urls';
 
 const alterationFrequencyData: ICBioData[] = [];
 
