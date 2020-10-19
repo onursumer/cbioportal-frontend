@@ -73,7 +73,7 @@ export default class PathwayMapperTable extends React.Component<
             IPathwayMapperTableColumnType.SCORE,
             IPathwayMapperTableColumnType.GENES,
         ],
-        columnsOverride: { columns: {} },
+        columnsOverride: {},
         initialSortColumn: 'Score',
     };
     @observable protected _columns: {
@@ -129,6 +129,8 @@ export default class PathwayMapperTable extends React.Component<
             ) => d.name.toUpperCase().includes(filterStringUpper),
             sortBy: (d: IPathwayMapperTable) => d.name,
             download: (d: IPathwayMapperTable) => d.name,
+
+            ...this.props.columnsOverride![IPathwayMapperTableColumnType.NAME],
         };
 
         this._columns[IPathwayMapperTableColumnType.SCORE] = {
@@ -170,6 +172,8 @@ export default class PathwayMapperTable extends React.Component<
             tooltip: <span>Genes matched</span>,
             sortBy: (d: IPathwayMapperTable) => d.genes.length,
             download: (d: IPathwayMapperTable) => d.genes.toString(),
+
+            ...this.props.columnsOverride![IPathwayMapperTableColumnType.GENES],
         };
     }
 
