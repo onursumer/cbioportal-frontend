@@ -62,6 +62,7 @@ export default class PatientViewPathwayMapper extends React.Component<
         return this.alterationFrequencyDataForQueryGenes;
     }
     @computed get alterationFrequencyDataForQueryGenes() {
+        console.log('IT IS CALLED 3');
         this.props.store.mergedMutationDataIncludingUncalledFilteredByGene.forEach(
             altData => {
                 const mutationType = {
@@ -129,22 +130,11 @@ export default class PatientViewPathwayMapper extends React.Component<
         });
         return keyed_genes;
     }
-    @computed get isStoreReady() {
-        return (
-            this.patientStore &&
-            this.patientStore.samples.isComplete &&
-            this.patientStore.mergedMutationData &&
-            this.patientStore.coverageInformation.isComplete &&
-            this.patientStore.mergedDiscreteCNADataFilteredByGene &&
-            this.patientStore.mergedMutationDataIncludingUncalledFilteredByGene
-        );
-    }
     public render() {
         //control the data
-        if (this.isStoreReady) {
-            this.addGenomicData(this.alterationFrequencyData);
-            this.getQueryGenes(this.alterationFrequencyData);
-        }
+        this.alterationFrequencyDataForQueryGenes;
+        this.getQueryGenes(this.alterationFrequencyData);
+
         if (!this.PathwayMapperComponent) {
             return null;
         }
@@ -184,11 +174,6 @@ export default class PatientViewPathwayMapper extends React.Component<
                 </div>
             </div>
         );
-    }
-
-    @computed get patientStore(): PatientViewPageStore | undefined {
-        let patientStore: PatientViewPageStore | undefined;
-        return patientStore;
     }
     /**
      * addGenomicData function is implemented in PathwayMapper component and overlays
