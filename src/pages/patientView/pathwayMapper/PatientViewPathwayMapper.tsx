@@ -62,7 +62,6 @@ export default class PatientViewPathwayMapper extends React.Component<
         return this.alterationFrequencyDataForQueryGenes;
     }
     @computed get alterationFrequencyDataForQueryGenes() {
-        console.log('IT IS CALLED 3');
         this.props.store.mergedMutationDataIncludingUncalledFilteredByGene.forEach(
             altData => {
                 const mutationType = {
@@ -131,10 +130,6 @@ export default class PatientViewPathwayMapper extends React.Component<
         return keyed_genes;
     }
     public render() {
-        //control the data
-        this.alterationFrequencyDataForQueryGenes;
-        this.getQueryGenes(this.alterationFrequencyData);
-
         if (!this.PathwayMapperComponent) {
             return null;
         }
