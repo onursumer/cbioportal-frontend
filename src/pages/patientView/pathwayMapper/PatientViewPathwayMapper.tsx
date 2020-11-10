@@ -19,9 +19,11 @@ import PathwayMapper, { ICBioData } from 'pathway-mapper';
 import 'pathway-mapper/dist/base.css';
 import 'cytoscape-panzoom/cytoscape.js-panzoom.css';
 import 'cytoscape-navigator/cytoscape.js-navigator.css';
+import SampleManager from '../SampleManager';
 
 interface IPatientViewPathwayMapperProps {
     store: PatientViewPageStore;
+    sampleManager: SampleManager | null;
 }
 
 const DEFAULT_RULESET_PARAMS = getGeneticTrackRuleSetParams(true, true, true);
@@ -104,6 +106,18 @@ export default class PatientViewPathwayMapper extends React.Component<
         if (!this.PathwayMapperComponent) {
             return null;
         }
+
+        var sampleIconData = {
+            sampleIndex: {},
+            sampleColors: {},
+        };
+        if (this.props.sampleManager) {
+            sampleIconData = {
+                sampleIndex: this.props.sampleManager.sampleIndex,
+                sampleColors: this.props.sampleManager.sampleColors,
+            };
+        }
+
         return (
             <div className="pathwayMapper">
                 <div
@@ -119,6 +133,7 @@ export default class PatientViewPathwayMapper extends React.Component<
                             isCollaborative={false}
                             genes={this.queryGenes}
                             cBioAlterationData={this.alterationFrequencyData}
+                            sampleIconData={sampleIconData}
                             tableComponent={this.renderTable}
                             patientView={true}
                             //message banner patch will be removed

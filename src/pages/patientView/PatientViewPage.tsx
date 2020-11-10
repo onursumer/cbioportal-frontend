@@ -1547,6 +1547,7 @@ export default class PatientViewPage extends React.Component<
                                         .mergedMutationDataIncludingUncalledFilteredByGene ? (
                                         <PatientViewPathwayMapper
                                             store={this.patientViewPageStore}
+                                            sampleManager={sampleManager}
                                         />
                                     ) : (
                                         <LoadingIndicator
