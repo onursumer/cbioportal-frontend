@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { PatientViewPageStore } from '../clinicalInformation/PatientViewPageStore';
+import SampleManager from '../SampleManager';
 import PathwayMapperTable, {
     IPathwayMapperTable,
     IPathwayMapperTableColumnType,
@@ -19,11 +20,10 @@ import PathwayMapper, { ICBioData } from 'pathway-mapper';
 import 'pathway-mapper/dist/base.css';
 import 'cytoscape-panzoom/cytoscape.js-panzoom.css';
 import 'cytoscape-navigator/cytoscape.js-navigator.css';
-import SampleManager from '../SampleManager';
 
 interface IPatientViewPathwayMapperProps {
     store: PatientViewPageStore;
-    sampleManager: SampleManager | null;
+    sampleManager?: SampleManager;
 }
 
 const DEFAULT_RULESET_PARAMS = getGeneticTrackRuleSetParams(true, true, true);
@@ -107,16 +107,15 @@ export default class PatientViewPathwayMapper extends React.Component<
             return null;
         }
 
-        var sampleIconData = {
-            sampleIndex: {},
-            sampleColors: {},
-        };
-        if (this.props.sampleManager) {
-            sampleIconData = {
-                sampleIndex: this.props.sampleManager.sampleIndex,
-                sampleColors: this.props.sampleManager.sampleColors,
-            };
-        }
+        const sampleIconData = this.props.sampleManager
+            ? {
+                  sampleIndex: this.props.sampleManager.sampleIndex,
+                  sampleColors: this.props.sampleManager.sampleColors,
+              }
+            : {
+                  sampleIndex: {},
+                  sampleColors: {},
+              };
 
         return (
             <div className="pathwayMapper">
