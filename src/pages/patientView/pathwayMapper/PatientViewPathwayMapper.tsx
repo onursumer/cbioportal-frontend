@@ -170,6 +170,7 @@ export default class PatientViewPathwayMapper extends React.Component<
                         tooltip: <span>Number of Genes Matched</span>,
                     },
                 }}
+                convertScoreRepresentation={score => score.toFixed(0)}
             />
         );
     }
