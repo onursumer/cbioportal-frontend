@@ -168,9 +168,13 @@ export default class PatientViewPathwayMapper extends React.Component<
                     [IPathwayMapperTableColumnType.SCORE]: {
                         name: '# Genes matched',
                         tooltip: <span>Number of Genes Matched</span>,
+                        render: (d: IPathwayMapperTable) => (
+                            <span>
+                                <b>{d.score.toFixed(0)}</b>
+                            </span>
+                        ),
                     },
                 }}
-                convertScoreRepresentation={score => score.toFixed(0)}
             />
         );
     }

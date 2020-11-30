@@ -34,7 +34,6 @@ interface IPathwayMapperTableProps {
     columnsOverride?: {
         [columnEnum: number]: Partial<PathwayMapperTableColumn>;
     };
-    convertScoreRepresentation?: (score: number) => string;
 }
 
 type PathwayMapperTableColumn = Column<IPathwayMapperTable>;
@@ -134,18 +133,11 @@ export default class PathwayMapperTable extends React.Component<
 
         this._columns[IPathwayMapperTableColumnType.SCORE] = {
             name: 'Score',
-            render: (d: IPathwayMapperTable) => {
-                const scoreRepresentation = this.props
-                    .convertScoreRepresentation
-                    ? this.props.convertScoreRepresentation(d.score)
-                    : d.score.toFixed(2);
-
-                return (
-                    <span>
-                        <b>{scoreRepresentation}</b>
-                    </span>
-                );
-            },
+            render: (d: IPathwayMapperTable) => (
+                <span>
+                    <b>{d.score.toFixed(2)}</b>
+                </span>
+            ),
             tooltip: <span>Score</span>,
 
             filter: (
