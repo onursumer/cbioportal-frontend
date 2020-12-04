@@ -168,6 +168,15 @@ export default class PathwayMapperTable extends React.Component<
                 );
             },
             tooltip: <span>Genes matched</span>,
+            filter: (
+                d: IPathwayMapperTable,
+                filterString: string,
+                filterStringUpper: string
+            ) =>
+                d.genes
+                    .join(' ')
+                    .toUpperCase()
+                    .includes(filterStringUpper),
             sortBy: (d: IPathwayMapperTable) => d.genes.length,
             download: (d: IPathwayMapperTable) => d.genes.toString(),
 

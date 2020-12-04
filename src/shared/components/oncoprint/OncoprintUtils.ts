@@ -59,7 +59,10 @@ import {
 } from '../../cache/ClinicalDataCache';
 import { RESERVED_CLINICAL_VALUE_COLORS } from 'shared/lib/Colors';
 import { ISelectOption } from './controls/OncoprintControls';
-import { NOT_APPLICABLE_VALUE } from 'shared/lib/GenericAssayUtils/GenericAssayCommonUtils';
+import {
+    COMMON_GENERIC_ASSAY_PROPERTY,
+    getGenericAssayMetaPropertyOrDefault,
+} from 'shared/lib/GenericAssayUtils/GenericAssayCommonUtils';
 import ifNotDefined from '../../lib/ifNotDefined';
 
 interface IGenesetExpansionMap {
@@ -1116,10 +1119,11 @@ export function makeGenericAssayProfileHeatmapTracksMobxPromise(
                     );
                     return _.keys(entry.entities).map(entityId => {
                         const entity = genericAssayEntitiesByEntityId[entityId];
-                        const entityName =
-                            'NAME' in entity.genericEntityMetaProperties
-                                ? entity.genericEntityMetaProperties['NAME']
-                                : entityId;
+                        const entityName = getGenericAssayMetaPropertyOrDefault(
+                            entity,
+                            COMMON_GENERIC_ASSAY_PROPERTY.NAME,
+                            entityId
+                        );
                         const description =
                             ('DESCRIPTION' in entity.genericEntityMetaProperties
                                 ? `${entityName} (${entity.genericEntityMetaProperties['DESCRIPTION']})`

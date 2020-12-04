@@ -8,9 +8,11 @@ import {
     ClinicalDataSingleStudyFilter,
     CopyNumberSeg,
     CosmicMutation,
+    DiscreteCopyNumberData,
+    DiscreteCopyNumberFilter,
     Gene,
-    GenePanel,
-    GenePanelData,
+    GenericAssayData,
+    GenericAssayDataMultipleStudyFilter,
     GenericAssayMeta,
     Geneset,
     GenesetDataFilterCriteria,
@@ -30,7 +32,6 @@ import {
     SampleIdentifier,
     SampleList,
     SampleMolecularIdentifier,
-    GenericAssayData,
 } from 'cbioportal-ts-api-client';
 import client from 'shared/api/cbioportalClientInstance';
 import { remoteData, stringListToSet } from 'cbioportal-frontend-commons';
@@ -42,9 +43,9 @@ import {
     IOncoKbData,
 } from 'cbioportal-utils';
 import {
-    VariantAnnotation,
     GenomeNexusAPI,
     GenomeNexusAPIInternal,
+    VariantAnnotation,
 } from 'genome-nexus-ts-api-client';
 import { CancerGene, IndicatorQueryResp } from 'oncokb-ts-api-client';
 import { cached, labelMobxPromises, MobxPromise } from 'mobxpromise';
@@ -56,36 +57,38 @@ import MutationCountCache from 'shared/cache/MutationCountCache';
 import DiscreteCNACache from 'shared/cache/DiscreteCNACache';
 import PdbHeaderCache from 'shared/cache/PdbHeaderCache';
 import {
-    annotateMolecularDatum,
+    evaluateDiscreteCNAPutativeDriverInfo,
+    evaluateMutationPutativeDriverInfo,
     existsSomeMutationWithAscnPropertyInCollection,
     fetchAllReferenceGenomeGenes,
+    fetchCnaOncoKbDataForOncoprint,
     fetchCopyNumberSegmentsForSamples,
     fetchGenes,
     fetchGermlineConsentedSamples,
     fetchOncoKbCancerGenes,
+    fetchOncoKbDataForOncoprint,
     fetchStudiesForSamplesWithoutCancerTypeClinicalData,
+    fetchSurvivalDataExists,
     fetchVariantAnnotationsIndexedByGenomicLocation,
+    filterAndAnnotateMolecularData,
+    filterAndAnnotateMutations,
     generateDataQueryFilter,
     generateUniqueSampleKeyToTumorTypeMap,
+    getGenomeNexusUrl,
+    getSurvivalClinicalAttributesPrefix,
     groupBy,
+    groupBySampleId,
     IDataQueryFilter,
     isMutationProfile,
-    groupBySampleId,
+    makeGetOncoKbCnaAnnotationForOncoprint,
+    makeGetOncoKbMutationAnnotationForOncoprint,
+    makeIsHotspotForOncoprint,
     mapSampleIdToClinicalData,
     ONCOKB_DEFAULT,
-    getGenomeNexusUrl,
-    fetchSurvivalDataExists,
-    getSurvivalClinicalAttributesPrefix,
-    makeIsHotspotForOncoprint,
-    fetchOncoKbDataForOncoprint,
-    makeGetOncoKbMutationAnnotationForOncoprint,
-    makeGetOncoKbCnaAnnotationForOncoprint,
-    fetchCnaOncoKbDataForOncoprint,
-    filterAndAnnotateMolecularData,
 } from 'shared/lib/StoreUtils';
 import {
-    getCoverageInformation,
     CoverageInformation,
+    getCoverageInformation,
 } from 'shared/lib/GenePanelUtils';
 import { fetchHotspotsData } from 'shared/lib/CancerHotspotsUtils';
 import ResultsViewMutationMapperStore from './mutation/ResultsViewMutationMapperStore';
@@ -113,7 +116,6 @@ import GenericAssayMolecularDataCache from '../../shared/cache/GenericAssayMolec
 import GeneCache from '../../shared/cache/GeneCache';
 import GenesetCache from '../../shared/cache/GenesetCache';
 import internalClient from '../../shared/api/cbioportalInternalClientInstance';
-import { getAlterationString } from '../../shared/lib/CopyNumberUtils';
 import memoize from 'memoize-weak-decorator';
 import request from 'superagent';
 import {
@@ -124,16 +126,15 @@ import { CancerStudyQueryUrlParams } from 'shared/components/query/QueryStore';
 import {
     compileMutations,
     computeCustomDriverAnnotationReport,
+    createDiscreteCopyNumberDataKey,
     DEFAULT_GENOME,
     excludeSpecialMolecularProfiles,
     ExtendedClinicalAttribute,
     fetchPatients,
     fetchQueriedStudies,
-    filterAndAnnotateMutations,
     FilteredAndAnnotatedMutationsReport,
     filterSubQueryData,
     getMolecularProfiles,
-    getOncoKbOncogenic,
     getSampleAlteredMap,
     groupDataByCase,
     initializeCustomDriverAnnotationSettings,
@@ -152,7 +153,6 @@ import { getDefaultMolecularProfiles } from '../../shared/lib/getDefaultMolecula
 import {
     parseSamplesSpecifications,
     populateSampleSpecificationsFromVirtualStudies,
-    ResultsViewComparisonSubTab,
     ResultsViewTab,
     substitutePhysicalStudiesForVirtualStudies,
 } from './ResultsViewPageHelpers';
@@ -197,14 +197,14 @@ import { decideMolecularProfileSortingOrder } from './download/DownloadUtils';
 import ResultsViewURLWrapper from 'pages/resultsView/ResultsViewURLWrapper';
 import { ChartTypeEnum } from 'pages/studyView/StudyViewConfig';
 import {
+    fetchGenericAssayDataByStableIdsAndMolecularIds,
     fetchGenericAssayMetaByMolecularProfileIdsGroupByGenericAssayType,
     fetchGenericAssayMetaByMolecularProfileIdsGroupByMolecularProfileId,
-    fetchGenericAssayDataByStableIdsAndMolecularIds,
+    COMMON_GENERIC_ASSAY_PROPERTY,
+    getGenericAssayMetaPropertyOrDefault,
 } from 'shared/lib/GenericAssayUtils/GenericAssayCommonUtils';
-import ComplexKeySet from '../../shared/lib/complexKeyDataStructures/ComplexKeySet';
 import { createVariantAnnotationsByMutationFetcher } from 'shared/components/mutationMapper/MutationMapperUtils';
 import { getGenomeNexusHgvsgUrl } from 'shared/api/urls';
-import ResultsViewComparisonStore from './comparison/ResultsViewComparisonStore';
 import { isMixedReferenceGenome } from 'shared/lib/referenceGenomeUtils';
 import {
     ALTERED_COLOR,
@@ -215,15 +215,13 @@ import {
     UNALTERED_COLOR,
 } from './comparison/ResultsViewComparisonUtils';
 import { makeUniqueColorGetter } from '../../shared/components/plots/PlotUtils';
-import ifNotDefined from '../../shared/lib/ifNotDefined';
 import ComplexKeyMap from '../../shared/lib/complexKeyDataStructures/ComplexKeyMap';
 import { getSuffixOfMolecularProfile } from 'shared/lib/molecularProfileUtils';
 import {
     CLINICAL_ATTRIBUTE_FIELD_ENUM,
     CLINICAL_ATTRIBUTE_ID_ENUM,
-    GENOME_NEXUS_ARG_FIELD_ENUM,
     GENETIC_PROFILE_FIELD_ENUM,
-    PUTATIVE_DRIVER,
+    GENOME_NEXUS_ARG_FIELD_ENUM,
     REQUEST_ARG_ENUM,
     SAMPLE_CANCER_TYPE_UNKNOWN,
 } from 'shared/constants';
@@ -246,10 +244,6 @@ export const AlterationTypeConstants = {
     GENERIC_ASSAY: 'GENERIC_ASSAY',
     STRUCTURAL_VARIANT: 'STRUCTURAL_VARIANT',
     MUTATION_UNCALLED: 'MUTATION_UNCALLED',
-};
-
-export const GenericAssayTypeConstants: { [s: string]: string } = {
-    TREATMENT_RESPONSE: 'TREATMENT_RESPONSE',
 };
 
 export const AlterationTypeDisplayConstants = {
@@ -308,10 +302,19 @@ export interface AnnotatedMutation extends Mutation {
     simplifiedMutationType: SimplifiedMutationType;
 }
 
-export interface AnnotatedNumericGeneMolecularData
+export interface CustomDriverNumericGeneMolecularData
     extends NumericGeneMolecularData {
+    driverFilter: string;
+    driverFilterAnnotation: string;
+    driverTiersFilter: string;
+    driverTiersFilterAnnotation: string;
+}
+
+export interface AnnotatedNumericGeneMolecularData
+    extends CustomDriverNumericGeneMolecularData {
     hugoGeneSymbol: string;
     oncoKbOncogenic: string;
+    putativeDriver: boolean;
 }
 
 export interface AnnotatedExtendedAlteration
@@ -612,6 +615,10 @@ export class ResultsViewPageStore {
     @computed
     get selectedMolecularProfileIds() {
         return getMolecularProfiles(this.urlWrapper.query);
+    }
+
+    public handleTabChange(id: string, replace?: boolean) {
+        this.urlWrapper.updateURL({}, `results/${id}`, false, replace);
     }
 
     @computed get tabId() {
@@ -1270,6 +1277,55 @@ export class ResultsViewPageStore {
         },
     });
 
+    // Isolate discrete CNA data from other NumericMolecularData
+    // and add the custom driver annotations to data points
+    readonly discreteCNAMolecularData = remoteData<
+        CustomDriverNumericGeneMolecularData[]
+    >({
+        await: () => [this.discreteCopyNumberAlterations, this.molecularData],
+        invoke: () => {
+            const cnaData = _.filter(
+                this.molecularData.result as any,
+                (d: any) => {
+                    return _.includes(
+                        this.cnaMolecularProfileIds,
+                        d.molecularProfileId
+                    );
+                }
+            );
+            _.forEach(cnaData, (d: any) => {
+                // Lookup the DiscreteCopyNumberData datum that
+                // holds the custom driver annotation.
+                const discreteCopyNumberDatumKey = createDiscreteCopyNumberDataKey(
+                    d
+                );
+                const discreteCopyNumberDatum =
+                    discreteCopyNumberDatumKey in
+                    this.sampleIdAndEntrezIdToDiscreteCopyNumberData
+                        ? this.sampleIdAndEntrezIdToDiscreteCopyNumberData[
+                              discreteCopyNumberDatumKey
+                          ]
+                        : undefined;
+
+                d.driverFilter = discreteCopyNumberDatum
+                    ? discreteCopyNumberDatum.driverFilter
+                    : '';
+                d.driverFilterAnnotation = discreteCopyNumberDatum
+                    ? discreteCopyNumberDatum.driverFilterAnnotation
+                    : '';
+                d.driverTiersFilter = discreteCopyNumberDatum
+                    ? discreteCopyNumberDatum.driverTiersFilter
+                    : '';
+                d.driverTiersFilterAnnotation = discreteCopyNumberDatum
+                    ? discreteCopyNumberDatum.driverTiersFilterAnnotation
+                    : '';
+            });
+            return Promise.resolve(
+                cnaData as CustomDriverNumericGeneMolecularData[]
+            );
+        },
+    });
+
     // other molecular profiles data download needs the data from non queried molecular profiles
     readonly nonSelectedDownloadableMolecularData = remoteData<
         NumericGeneMolecularData[]
@@ -1459,7 +1515,6 @@ export class ResultsViewPageStore {
             this.studyToDataQueryFilter,
             this.genes,
             this.genesets,
-            this.genericAssayEntitiesGroupByGenericAssayType,
         ],
         invoke: async () => {
             const ret: MolecularProfile[] = [];
@@ -2337,6 +2392,17 @@ export class ResultsViewPageStore {
         },
     });
 
+    @computed get cnaMolecularProfileIds() {
+        const profiles = this.cnaProfiles.isComplete
+            ? this.cnaProfiles.result
+            : [];
+        const profileIds = _.map(
+            profiles,
+            (p: MolecularProfile) => p.molecularProfileId
+        );
+        return profileIds;
+    }
+
     @computed
     get chartMetaSet(): { [id: string]: ChartMeta } {
         let _chartMetaSet: { [id: string]: ChartMeta } = {} as {
@@ -2788,6 +2854,69 @@ export class ResultsViewPageStore {
             }
         },
     });
+
+    readonly discreteCopyNumberAlterations = remoteData<
+        DiscreteCopyNumberData[]
+    >({
+        await: () => [
+            this.genes,
+            this.studyToMolecularProfileDiscreteCna,
+            this.samples,
+        ],
+        invoke: async () => {
+            if (this.cnaMolecularProfileIds.length == 0) {
+                return [];
+            }
+
+            const entrezGeneIds = _.map(
+                this.genes.result,
+                (gene: Gene) => gene.entrezGeneId
+            );
+
+            const promises = _.map(
+                this.cnaMolecularProfileIds,
+                cnaMolecularProfileId => {
+                    const sampleIds = _.map(
+                        this.samples.result,
+                        (sample: Sample) => {
+                            if (
+                                sample.studyId in
+                                this.studyToMolecularProfileDiscreteCna.result
+                            ) {
+                                return sample.sampleId;
+                            }
+                        }
+                    );
+
+                    return client.fetchDiscreteCopyNumbersInMolecularProfileUsingPOST(
+                        {
+                            discreteCopyNumberEventType: 'HOMDEL_AND_AMP',
+                            discreteCopyNumberFilter: {
+                                entrezGeneIds,
+                                sampleIds,
+                            } as DiscreteCopyNumberFilter,
+                            molecularProfileId: cnaMolecularProfileId,
+                            projection: 'DETAILED',
+                        }
+                    );
+                }
+            );
+
+            let outdata = [] as DiscreteCopyNumberData[];
+            await Promise.all(promises).then((cnaData: any[]) => {
+                outdata = _.flattenDeep(cnaData);
+            });
+
+            return Promise.resolve(outdata as DiscreteCopyNumberData[]);
+        },
+    });
+
+    @computed get sampleIdAndEntrezIdToDiscreteCopyNumberData() {
+        return _.keyBy(
+            this.discreteCopyNumberAlterations.result,
+            (d: DiscreteCopyNumberData) => createDiscreteCopyNumberDataKey(d)
+        );
+    }
 
     readonly mutations = remoteData<Mutation[]>({
         await: () => [
@@ -3932,10 +4061,13 @@ export class ResultsViewPageStore {
                         const linkMap: { [stableId: string]: string } = {};
                         genericAssayEntities.forEach(entity => {
                             // if entity meta contains reference url, add the link into map
-                            linkMap[entity.stableId] =
-                                'URL' in entity.genericEntityMetaProperties
-                                    ? entity.genericEntityMetaProperties['URL']
-                                    : '';
+                            linkMap[
+                                entity.stableId
+                            ] = getGenericAssayMetaPropertyOrDefault(
+                                entity,
+                                COMMON_GENERIC_ASSAY_PROPERTY.URL,
+                                ''
+                            );
                         });
                         return linkMap;
                     }
@@ -3943,6 +4075,24 @@ export class ResultsViewPageStore {
             } else {
                 return {};
             }
+        },
+    });
+
+    readonly genericAssayStableIdToMeta = remoteData<{
+        [genericAssayStableId: string]: GenericAssayMeta;
+    }>({
+        await: () => [this.genericAssayEntitiesGroupByMolecularProfileId],
+        invoke: () => {
+            return Promise.resolve(
+                _.chain(
+                    this.genericAssayEntitiesGroupByMolecularProfileId.result
+                )
+                    .values()
+                    .flatten()
+                    .uniqBy(meta => meta.stableId)
+                    .keyBy(meta => meta.stableId)
+                    .value()
+            );
         },
     });
 
@@ -3978,10 +4128,7 @@ export class ResultsViewPageStore {
     readonly genericAssayEntityStableIdsGroupByProfileIdSuffix = remoteData<{
         [profileIdSuffix: string]: string[];
     }>({
-        await: () => [
-            this.genericAssayEntitiesGroupByMolecularProfileId,
-            this.genericAssayProfilesGroupByProfileIdSuffix,
-        ],
+        await: () => [this.genericAssayProfilesGroupByProfileIdSuffix],
         invoke: () => {
             return Promise.resolve(
                 _.mapValues(
@@ -3991,12 +4138,13 @@ export class ResultsViewPageStore {
                             .map(
                                 profile =>
                                     this
-                                        .genericAssayEntitiesGroupByMolecularProfileId
-                                        .result![profile.molecularProfileId]
+                                        .selectedGenericAssayEntitiesGroupByMolecularProfileId[
+                                        profile.molecularProfileId
+                                    ]
                             )
                             .flatten()
-                            .map(entity => entity.stableId)
                             .uniq()
+                            .compact()
                             .value();
                     }
                 )
@@ -4008,6 +4156,7 @@ export class ResultsViewPageStore {
         [profileIdSuffix: string]: GenericAssayData[];
     }>({
         await: () => [
+            this.samples,
             this.genericAssayProfilesGroupByProfileIdSuffix,
             this.genericAssayEntityStableIdsGroupByProfileIdSuffix,
         ],
@@ -4027,14 +4176,36 @@ export class ResultsViewPageStore {
                             .genericAssayEntityStableIdsGroupByProfileIdSuffix
                             .result![profileIdSuffix];
 
-                        return fetchGenericAssayDataByStableIdsAndMolecularIds(
-                            stableIds,
-                            molecularIds
-                        ).then(genericAssayData => {
-                            genericAssayDataGroupByProfileIdSuffix[
-                                profileIdSuffix
-                            ] = genericAssayData;
-                        });
+                        const sampleMolecularIdentifiers = _.flatMap(
+                            molecularIds,
+                            molecularId =>
+                                _.map(this.samples.result, sample => {
+                                    return {
+                                        molecularProfileId: molecularId,
+                                        sampleId: sample.sampleId,
+                                    } as SampleMolecularIdentifier;
+                                })
+                        );
+
+                        if (
+                            !_.isEmpty(stableIds) &&
+                            !_.isEmpty(sampleMolecularIdentifiers)
+                        ) {
+                            return client
+                                .fetchGenericAssayDataInMultipleMolecularProfilesUsingPOST(
+                                    {
+                                        genericAssayDataMultipleStudyFilter: {
+                                            genericAssayStableIds: stableIds,
+                                            sampleMolecularIdentifiers,
+                                        } as GenericAssayDataMultipleStudyFilter,
+                                    } as any
+                                )
+                                .then(genericAssayData => {
+                                    genericAssayDataGroupByProfileIdSuffix[
+                                        profileIdSuffix
+                                    ] = genericAssayData;
+                                });
+                        }
                     }
                 )
             );
@@ -4047,10 +4218,13 @@ export class ResultsViewPageStore {
         hasBinary: boolean;
         tiers: string[];
     }>({
-        await: () => [this.mutations],
+        await: () => [this.mutations, this.discreteCNAMolecularData],
         invoke: () => {
             return Promise.resolve(
-                computeCustomDriverAnnotationReport(this.mutations.result!)
+                computeCustomDriverAnnotationReport([
+                    ...this.mutations.result!,
+                    ...this.discreteCNAMolecularData.result!,
+                ])
             );
         },
         onResult: result => {
@@ -4067,14 +4241,14 @@ export class ResultsViewPageStore {
     readonly _filteredAndAnnotatedMutationsReport = remoteData({
         await: () => [
             this.mutations,
-            this.getPutativeDriverInfo,
+            this.getMutationPutativeDriverInfo,
             this.entrezGeneIdToGene,
         ],
         invoke: () => {
             return Promise.resolve(
                 filterAndAnnotateMutations(
                     this.mutations.result!,
-                    this.getPutativeDriverInfo.result!,
+                    this.getMutationPutativeDriverInfo.result!,
                     this.entrezGeneIdToGene.result!
                 )
             );
@@ -4108,13 +4282,13 @@ export class ResultsViewPageStore {
     >(q => ({
         await: () => [
             this.mutationCache.get(q),
-            this.getPutativeDriverInfo,
+            this.getMutationPutativeDriverInfo,
             this.entrezGeneIdToGene,
         ],
         invoke: () => {
             const filteredAndAnnotatedReport = filterAndAnnotateMutations(
                 this.mutationCache.get(q).result!,
-                this.getPutativeDriverInfo.result!,
+                this.getMutationPutativeDriverInfo.result!,
                 this.entrezGeneIdToGene.result!
             );
             const data = filteredAndAnnotatedReport.data
@@ -4129,16 +4303,15 @@ export class ResultsViewPageStore {
         await: () => [
             this.molecularData,
             this.entrezGeneIdToGene,
-            this.getOncoKbCnaAnnotationForOncoprint,
-            this.molecularProfileIdToMolecularProfile,
+            this.getDiscreteCNAPutativeDriverInfo,
         ],
         invoke: () =>
             Promise.resolve(
                 filterAndAnnotateMolecularData(
                     this.molecularData.result!,
-                    this.entrezGeneIdToGene,
-                    this.getOncoKbCnaAnnotationForOncoprint,
-                    this.molecularProfileIdToMolecularProfile
+                    this.getDiscreteCNAPutativeDriverInfo.result!,
+                    this.entrezGeneIdToGene.result!,
+                    this.cnaMolecularProfileIds
                 )
             ),
     });
@@ -4168,15 +4341,14 @@ export class ResultsViewPageStore {
 
     public annotatedCnaCache = new MobxPromiseCache<
         { entrezGeneId: number },
-        AnnotatedNumericGeneMolecularData[]
+        CustomDriverNumericGeneMolecularData[]
     >(q => ({
         await: () =>
             this.numericGeneMolecularDataCache.await(
                 [
                     this.studyToMolecularProfileDiscreteCna,
+                    this.getDiscreteCNAPutativeDriverInfo,
                     this.entrezGeneIdToGene,
-                    this.getOncoKbCnaAnnotationForOncoprint,
-                    this.molecularProfileIdToMolecularProfile,
                 ],
                 studyToMolecularProfileDiscrete => {
                     return _.values(studyToMolecularProfileDiscrete).map(p => ({
@@ -4186,7 +4358,7 @@ export class ResultsViewPageStore {
                 }
             ),
         invoke: () => {
-            const results = _.flatten(
+            const cnaData = _.flatten(
                 this.numericGeneMolecularDataCache
                     .getAll(
                         _.values(
@@ -4197,35 +4369,25 @@ export class ResultsViewPageStore {
                         }))
                     )
                     .map(p => p.result!)
+            ) as CustomDriverNumericGeneMolecularData[];
+            const filteredAndAnnotatedReport = filterAndAnnotateMolecularData(
+                cnaData,
+                this.getDiscreteCNAPutativeDriverInfo.result!,
+                this.entrezGeneIdToGene.result!
             );
-            const entrezGeneIdToGene = this.entrezGeneIdToGene.result!;
-            let getOncoKbAnnotation: (
-                datum: NumericGeneMolecularData
-            ) => IndicatorQueryResp | undefined;
-            if (
-                this.getOncoKbCnaAnnotationForOncoprint.result! instanceof Error
-            ) {
-                getOncoKbAnnotation = () => undefined;
-            } else {
-                getOncoKbAnnotation = this.getOncoKbCnaAnnotationForOncoprint
-                    .result! as typeof getOncoKbAnnotation;
-            }
-            const profileIdToProfile = this.molecularProfileIdToMolecularProfile
-                .result!;
+            const data = filteredAndAnnotatedReport.data.concat(
+                filteredAndAnnotatedReport.vus
+            );
+
             return Promise.resolve(
-                results.map(d => {
-                    return annotateMolecularDatum(
-                        d,
-                        getOncoKbAnnotation,
-                        profileIdToProfile,
-                        entrezGeneIdToGene
-                    );
-                })
+                filteredAndAnnotatedReport.data.concat(
+                    filteredAndAnnotatedReport.vus
+                )
             );
         },
     }));
 
-    readonly getPutativeDriverInfo = remoteData({
+    readonly getMutationPutativeDriverInfo = remoteData({
         await: () => {
             const toAwait = [];
             if (this.driverAnnotationSettings.oncoKb) {
@@ -4265,50 +4427,73 @@ export class ResultsViewPageStore {
                     ) &&
                     getOncoKbMutationAnnotationForOncoprint(mutation);
 
-                let oncoKb: string = '';
-                if (oncoKbDatum) {
-                    oncoKb = getOncoKbOncogenic(oncoKbDatum);
-                }
-
-                const hotspots: boolean =
-                    this.driverAnnotationSettings.hotspots &&
+                const isHotspotDriver =
                     !(this.isHotspotForOncoprint.result instanceof Error) &&
                     this.isHotspotForOncoprint.result!(mutation);
-
-                const cbioportalCount: boolean =
-                    this.driverAnnotationSettings.cbioportalCount &&
+                const cbioportalCountExceeded =
                     this.getCBioportalCount.isComplete &&
                     this.getCBioportalCount.result!(mutation) >=
                         this.driverAnnotationSettings.cbioportalCountThreshold;
-
-                const cosmicCount: boolean =
-                    this.driverAnnotationSettings.cosmicCount &&
+                const cosmicCountExceeded =
                     this.getCosmicCount.isComplete &&
                     this.getCosmicCount.result!(mutation) >=
                         this.driverAnnotationSettings.cosmicCountThreshold;
 
-                const customDriverBinary: boolean =
-                    (this.driverAnnotationSettings.customBinary &&
-                        mutation.driverFilter === PUTATIVE_DRIVER) ||
-                    false;
-
-                const customDriverTier: string | undefined =
-                    mutation.driverTiersFilter &&
-                    this.driverAnnotationSettings.driverTiers.get(
-                        mutation.driverTiersFilter
-                    )
-                        ? mutation.driverTiersFilter
-                        : undefined;
-
-                return {
-                    oncoKb,
-                    hotspots,
-                    cbioportalCount,
-                    cosmicCount,
-                    customDriverBinary,
-                    customDriverTier,
-                };
+                // Note: custom driver annotations are part of the incoming datum
+                return evaluateMutationPutativeDriverInfo(
+                    mutation,
+                    oncoKbDatum,
+                    this.driverAnnotationSettings.hotspots,
+                    isHotspotDriver,
+                    this.driverAnnotationSettings.cbioportalCount,
+                    cbioportalCountExceeded,
+                    this.driverAnnotationSettings.cosmicCount,
+                    cosmicCountExceeded,
+                    this.driverAnnotationSettings.customBinary,
+                    this.driverAnnotationSettings.driverTiers
+                );
             });
+        },
+    });
+
+    readonly getDiscreteCNAPutativeDriverInfo = remoteData({
+        await: () => {
+            const toAwait = [];
+            if (this.driverAnnotationSettings.oncoKb) {
+                toAwait.push(this.getOncoKbCnaAnnotationForOncoprint);
+            }
+            return toAwait;
+        },
+        invoke: () => {
+            return Promise.resolve(
+                (
+                    cnaDatum: CustomDriverNumericGeneMolecularData
+                ): {
+                    oncoKb: string;
+                    customDriverBinary: boolean;
+                    customDriverTier?: string | undefined;
+                } => {
+                    const getOncoKBAnnotationFunc = this
+                        .getOncoKbCnaAnnotationForOncoprint.result!;
+                    const oncoKbDatum:
+                        | IndicatorQueryResp
+                        | undefined
+                        | null
+                        | false =
+                        this.driverAnnotationSettings.oncoKb &&
+                        getOncoKBAnnotationFunc &&
+                        !(getOncoKBAnnotationFunc instanceof Error) &&
+                        getOncoKBAnnotationFunc(cnaDatum);
+
+                    // Note: custom driver annotations are part of the incoming datum
+                    return evaluateDiscreteCNAPutativeDriverInfo(
+                        cnaDatum,
+                        oncoKbDatum,
+                        this.driverAnnotationSettings.customBinary,
+                        this.driverAnnotationSettings.driverTiers
+                    );
+                }
+            );
         },
     });
 
@@ -4405,14 +4590,12 @@ export class ResultsViewPageStore {
             await: () => [
                 this.uniqueSampleKeyToTumorType,
                 this.oncoKbAnnotatedGenes,
-                this.molecularData,
-                this.molecularProfileIdToMolecularProfile,
+                this.discreteCNAMolecularData,
             ],
             invoke: async () =>
                 fetchCnaOncoKbDataForOncoprint(
                     this.oncoKbAnnotatedGenes,
-                    this.molecularData,
-                    this.molecularProfileIdToMolecularProfile
+                    this.discreteCNAMolecularData
                 ),
         },
         ONCOKB_DEFAULT
