@@ -1,20 +1,14 @@
 import * as React from 'react';
 import _ from 'lodash';
 import { ResultsViewPageStore } from '../ResultsViewPageStore';
-import { addGenesToQuery, ResultsViewTab } from '../ResultsViewPageHelpers';
+import { addGenesToQuery } from '../ResultsViewPageHelpers';
 import 'pathway-mapper/dist/base.css';
 import PathwayMapperTable, {
     IPathwayMapperTable,
 } from '../../../shared/lib/pathwayMapper/PathwayMapperTable';
 import { observer } from 'mobx-react';
 import autobind from 'autobind-decorator';
-import {
-    observable,
-    computed,
-    action,
-    reaction,
-    IReactionDisposer,
-} from 'mobx';
+import { observable, computed, action } from 'mobx';
 import { Row } from 'react-bootstrap';
 
 import { AppStore } from 'AppStore';
@@ -23,23 +17,22 @@ import { fetchGenes } from 'shared/lib/StoreUtils';
 import OqlStatusBanner from 'shared/components/banners/OqlStatusBanner';
 import { getAlterationData } from 'shared/components/oncoprint/OncoprintUtils';
 import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer, toast } from 'react-toastify';
 import { initStore } from '../ResultsViewPage';
 import ResultsViewURLWrapper from '../ResultsViewURLWrapper';
 
 import 'cytoscape-panzoom/cytoscape.js-panzoom.css';
 import 'cytoscape-navigator/cytoscape.js-navigator.css';
 import 'react-toastify/dist/ReactToastify.css';
-import styles from './pathwayMapper.module.scss';
 import PathwayMapper, { ICBioData } from 'pathway-mapper';
-import AlterationFilterWarning from '../../../shared/components/banners/AlterationFilterWarning';
-import CaseFilterWarning from '../../../shared/components/banners/CaseFilterWarning';
+import PathwayMapperMessageBox from './PathwayMapperMessageBox';
 
 interface IResultsViewPathwayMapperProps {
     store: ResultsViewPageStore;
     appStore: AppStore;
     urlWrapper: ResultsViewURLWrapper;
 }
+
+const LOADING_MESSAGE = 'Loading alteration data...';
 
 @observer
 export default class ResultsViewPathwayMapper extends React.Component<
@@ -55,28 +48,13 @@ export default class ResultsViewPathwayMapper extends React.Component<
     private newGenesFromPathway: string[];
 
     @observable
-    private activeToasts: React.ReactText[];
-
-    private toastReaction: IReactionDisposer;
+    private warningMessage: string | null;
 
     private readonly validNonQueryGenes = remoteData<string[]>({
         invoke: async () => {
             const genes = await fetchGenes(this.newGenesFromPathway);
 
             return genes.map(gene => gene.hugoGeneSymbol);
-        },
-        onResult: (genes: string[]) => {
-            // show loading text only if there are actually new genes to load
-            if (genes.length > 0) {
-                const tId = toast('Loading alteration data...', {
-                    autoClose: false,
-                    draggable: false,
-                    position: 'bottom-left',
-                    className: styles.toast,
-                });
-
-                this.activeToasts.push(tId);
-            }
         },
     });
 
@@ -85,21 +63,8 @@ export default class ResultsViewPathwayMapper extends React.Component<
 
     constructor(props: IResultsViewPathwayMapperProps) {
         super(props);
-        this.activeToasts = [];
         this.accumulatedValidGenes = {};
         this.accumulatedAlterationFrequencyDataForNonQueryGenes = [];
-
-        this.toastReaction = reaction(
-            () => [props.store.tabId],
-            ([tabId]) => {
-                // Close all toasts when the Pathway Mapper tab is not visible.
-                if (tabId !== ResultsViewTab.PATHWAY_MAPPER) {
-                    this.activeToasts.length = 0;
-                    toast.dismiss();
-                }
-            },
-            { fireImmediately: true }
-        );
 
         // @ts-ignore
         import(/* webpackChunkName: "pathway-mapper" */ 'pathway-mapper').then(
@@ -119,7 +84,25 @@ export default class ResultsViewPathwayMapper extends React.Component<
             this.alterationFrequencyDataForNonQueryGenes
         );
     }
+    @computed get message(): string {
+        if (this.isNewStoreReady && this.warningMessage === LOADING_MESSAGE) {
+            return '';
+        }
 
+        if (
+            !this.isNewStoreReady &&
+            this.validNonQueryGenes.isComplete &&
+            this.validNonQueryGenes.result.length > 0
+        ) {
+            return LOADING_MESSAGE;
+        }
+
+        if (!this.warningMessage) {
+            return '';
+        }
+
+        return this.warningMessage;
+    }
     @computed get alterationFrequencyDataForQueryGenes() {
         const alterationFrequencyData: ICBioData[] = [];
 
@@ -202,7 +185,6 @@ export default class ResultsViewPathwayMapper extends React.Component<
         // Alteration data of non-query genes are loaded.
         if (this.isNewStoreReady) {
             this.addGenomicData(this.alterationFrequencyData);
-            this.dismissActiveToasts();
         }
 
         if (!this.PathwayMapperComponent) {
@@ -211,15 +193,6 @@ export default class ResultsViewPathwayMapper extends React.Component<
 
         return (
             <div className="pathwayMapper">
-                <div className={'tabMessageContainer'}>
-                    <OqlStatusBanner
-                        className="plots-oql-status-banner"
-                        store={this.props.store}
-                        tabReflectsOql={true}
-                    />
-                    <AlterationFilterWarning store={this.props.store} />
-                    <CaseFilterWarning store={this.props.store} />
-                </div>
                 <div
                     data-test="pathwayMapperTabDiv"
                     className="cBioMode"
@@ -233,7 +206,7 @@ export default class ResultsViewPathwayMapper extends React.Component<
                                 tabReflectsOql={true}
                             />
                             {/*
-                                  // @ts-ignore */}
+                              // @ts-ignore */}
                             <this.PathwayMapperComponent
                                 isCBioPortal={true}
                                 isCollaborative={false}
@@ -246,24 +219,17 @@ export default class ResultsViewPathwayMapper extends React.Component<
                                 addGenomicDataHandler={
                                     this.addGenomicDataHandler
                                 }
+                                messageBanner={this.renderBanner} //messgaeBanner
                                 tableComponent={this.renderTable}
                                 validGenes={this.validGenes}
-                                toast={toast}
-                                //messageBanner Patch will be removed
-                                messageBanner={this.renderBanner}
-                            />
-                            <ToastContainer
-                                closeButton={<i className="fa fa-times" />}
+                                toast={null}
+                                showMessage={this.updateMessage}
                             />
                         </React.Fragment>
                     </Row>
                 </div>
             </div>
         );
-    }
-
-    componentWillUnmount(): void {
-        this.toastReaction();
     }
 
     /**
@@ -349,18 +315,25 @@ export default class ResultsViewPathwayMapper extends React.Component<
     }
 
     @autobind
-    private dismissActiveToasts() {
-        // Toasts are removed with delay
-        setTimeout(() => {
-            this.activeToasts.forEach(tId => {
-                toast.dismiss(tId);
-            });
-        }, 2000);
+    @action
+    private updateMessage(message: string) {
+        this.warningMessage = message;
     }
-    //will be removed when banner is added
+
+    @autobind
+    @action
+    private clearMessage() {
+        this.warningMessage = null;
+    }
     @autobind
     private renderBanner() {
-        return null;
+        return (
+            <PathwayMapperMessageBox
+                message={this.message}
+                loadingMessage={LOADING_MESSAGE}
+                onClearMessage={this.clearMessage}
+            />
+        );
     }
     @autobind
     private renderTable(
@@ -373,6 +346,7 @@ export default class ResultsViewPathwayMapper extends React.Component<
                 data={data}
                 selectedPathway={selectedPathway}
                 changePathway={onPathwaySelect}
+                columnsOverride={{}}
             />
         );
     }
