@@ -19041,7 +19041,7 @@ react-text-truncate@^0.9.0:
   dependencies:
     prop-types "^15.5.7"
 
-react-toastify@^5.3.1, react-toastify@^5.3.2:
+react-toastify@^5.3.1:
   version "5.5.0"
   resolved "https://registry.yarnpkg.com/react-toastify/-/react-toastify-5.5.0.tgz#f55de44f6b5e3ce3b13b69e5bb4427f2c9404822"
   integrity sha512-jsVme7jALIFGRyQsri/g4YTsRuaaGI70T6/ikjwZMB4mwTZaCWqj5NqxhGrRStKlJc5npXKKvKeqTiRGQl78LQ==
