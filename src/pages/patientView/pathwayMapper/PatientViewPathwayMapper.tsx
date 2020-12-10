@@ -166,11 +166,11 @@ export default class PatientViewPathwayMapper extends React.Component<
                 changePathway={onPathwaySelect}
                 columnsOverride={{
                     [IPathwayMapperTableColumnType.SCORE]: {
-                        name: '# Genes matched',
-                        tooltip: <span>Number of Genes Matched</span>,
+                        name: 'Pathway Altered',
+                        tooltip: <span>Whether Genes in the Pathway Were Altered</span>,
                         render: (d: IPathwayMapperTable) => (
                             <span>
-                                <b>{d.score.toFixed(0)}</b>
+                                <b>{d.score > 0 ? 'True' : 'False'}</b>
                             </span>
                         ),
                     },
