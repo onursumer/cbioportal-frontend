@@ -12,7 +12,7 @@ const PathwayMapperMessageBox: React.FunctionComponent<PathwayMapperMessageBoxPr
     const isWarningMessage = message !== props.loadingMessage;
     return (
         <div
-            id="pathway-mapper-message-box"
+            data-test="pathwayMapperMessageBox"
             className={
                 'alert ' +
                 (isWarningMessage ? 'alert-warning' : 'alert-success')
