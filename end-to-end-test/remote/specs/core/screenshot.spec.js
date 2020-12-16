@@ -324,6 +324,21 @@ describe('patient view page screenshot test', function() {
         var res = browser.checkElement('#mainColumn', { hide: ['.qtip'] });
         assertScreenShotMatch(res);
     });
+
+    it('patient view pathways tab lgg_ucsf_2014 P04', function() {
+        var url = `${CBIOPORTAL_URL}/patient?studyId=lgg_ucsf_2014&caseId=P04`;
+        goToUrlAndSetLocalStorage(url);
+        
+        // go to pathways tab
+        browser.click('a.tabAnchor_pathways');
+
+        browser.waitForVisible('#cy', 10000);
+        var res = browser.checkElement('[data-test="pathwayMapperTabDiv"]', {
+            hide: ['.qtip', '.__react_component_tooltip', '.rc-tooltip'],
+        });
+        assertScreenShotMatch(res);
+    });
+
 });
 
 describe('enrichments tab screenshot tests', function() {
