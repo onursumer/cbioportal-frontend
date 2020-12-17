@@ -20,8 +20,9 @@ const PathwayMapperMessageBox: React.FunctionComponent<PathwayMapperMessageBoxPr
             style={{
                 marginLeft: '1%',
                 marginBottom: '0px',
+                marginTop: '5px',
                 color: 'black',
-                maxHeight: '35px',
+                maxHeight: '32px',
                 overflowY: 'auto',
                 display: message.length == 0 ? 'none' : 'block',
             }}
