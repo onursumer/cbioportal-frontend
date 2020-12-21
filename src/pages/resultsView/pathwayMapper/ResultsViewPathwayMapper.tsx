@@ -346,6 +346,7 @@ export default class ResultsViewPathwayMapper extends React.Component<
                 data={data}
                 selectedPathway={selectedPathway}
                 changePathway={onPathwaySelect}
+                onSelectedPathwayChange={this.clearMessage}
             />
         );
     }
