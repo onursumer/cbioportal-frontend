@@ -589,8 +589,19 @@ export default abstract class ComparisonStore {
         };
     } = {};
 
-    readonly selectedStudyMutationEnrichmentProfileMap = remoteData({
+    readonly mutationEnrichmentProfilesByStudyId = remoteData({
         await: () => [this.mutationEnrichmentProfiles],
+        invoke: () =>
+            Promise.resolve(
+                _.groupBy(
+                    this.mutationEnrichmentProfiles.result,
+                    profile => profile.studyId
+                )
+            ),
+    });
+
+    readonly selectedStudyMutationEnrichmentProfileMap = remoteData({
+        await: () => [this.mutationEnrichmentProfilesByStudyId],
         invoke: () => {
             //Only return Mutation profile if any mutation type is selected, otherwise return {}
             if (
@@ -600,14 +611,10 @@ export default abstract class ComparisonStore {
             ) {
                 // set default enrichmentProfileMap if not selected yet
                 if (_.isEmpty(this._mutationEnrichmentProfileMap)) {
-                    const molecularProfilesbyStudyId = _.groupBy(
-                        this.mutationEnrichmentProfiles.result!,
-                        profile => profile.studyId
-                    );
                     // Select only one molecular profile for each study
                     return Promise.resolve(
                         _.mapValues(
-                            molecularProfilesbyStudyId,
+                            this.mutationEnrichmentProfilesByStudyId.result,
                             molecularProfiles => molecularProfiles[0]
                         )
                     );
@@ -620,8 +627,19 @@ export default abstract class ComparisonStore {
         },
     });
 
-    readonly selectedStudyCopyNumberEnrichmentProfileMap = remoteData({
+    readonly copyNumberEnrichmentProfilesByStudyId = remoteData({
         await: () => [this.copyNumberEnrichmentProfiles],
+        invoke: () =>
+            Promise.resolve(
+                _.groupBy(
+                    this.copyNumberEnrichmentProfiles.result!,
+                    profile => profile.studyId
+                )
+            ),
+    });
+
+    readonly selectedStudyCopyNumberEnrichmentProfileMap = remoteData({
+        await: () => [this.copyNumberEnrichmentProfilesByStudyId],
         invoke: () => {
             //Only return Copy Number profile if any copy number type is selected, otherwise return {}
             if (
@@ -631,14 +649,10 @@ export default abstract class ComparisonStore {
             ) {
                 // set default enrichmentProfileMap if not selected yet
                 if (_.isEmpty(this._copyNumberEnrichmentProfileMap)) {
-                    const molecularProfilesbyStudyId = _.groupBy(
-                        this.copyNumberEnrichmentProfiles.result!,
-                        profile => profile.studyId
-                    );
                     // Select only one molecular profile for each study
                     return Promise.resolve(
                         _.mapValues(
-                            molecularProfilesbyStudyId,
+                            this.copyNumberEnrichmentProfilesByStudyId.result,
                             molecularProfiles => molecularProfiles[0]
                         )
                     );
@@ -653,19 +667,26 @@ export default abstract class ComparisonStore {
         },
     });
 
-    readonly selectedmRNAEnrichmentProfileMap = remoteData({
+    readonly mRNAEnrichmentProfilesByStudyId = remoteData({
         await: () => [this.mRNAEnrichmentProfiles],
+        invoke: () =>
+            Promise.resolve(
+                _.groupBy(
+                    this.mRNAEnrichmentProfiles.result,
+                    profile => profile.studyId
+                )
+            ),
+    });
+
+    readonly selectedmRNAEnrichmentProfileMap = remoteData({
+        await: () => [this.mRNAEnrichmentProfilesByStudyId],
         invoke: () => {
             // set default enrichmentProfileMap if not selected yet
             if (_.isEmpty(this._mRNAEnrichmentProfileMap)) {
-                const molecularProfilesbyStudyId = _.groupBy(
-                    this.mRNAEnrichmentProfiles.result!,
-                    profile => profile.studyId
-                );
                 // Select only one molecular profile for each study
                 return Promise.resolve(
                     _.mapValues(
-                        molecularProfilesbyStudyId,
+                        this.mRNAEnrichmentProfilesByStudyId.result,
                         molecularProfiles => molecularProfiles[0]
                     )
                 );
@@ -675,19 +696,26 @@ export default abstract class ComparisonStore {
         },
     });
 
-    readonly selectedProteinEnrichmentProfileMap = remoteData({
+    readonly proteinEnrichmentProfilesByStudyId = remoteData({
         await: () => [this.proteinEnrichmentProfiles],
+        invoke: () =>
+            Promise.resolve(
+                _.groupBy(
+                    this.proteinEnrichmentProfiles.result,
+                    profile => profile.studyId
+                )
+            ),
+    });
+
+    readonly selectedProteinEnrichmentProfileMap = remoteData({
+        await: () => [this.proteinEnrichmentProfilesByStudyId],
         invoke: () => {
             // set default enrichmentProfileMap if not selected yet
             if (_.isEmpty(this._proteinEnrichmentProfileMap)) {
-                const molecularProfilesbyStudyId = _.groupBy(
-                    this.proteinEnrichmentProfiles.result!,
-                    profile => profile.studyId
-                );
                 // Select only one molecular profile for each study
                 return Promise.resolve(
                     _.mapValues(
-                        molecularProfilesbyStudyId,
+                        this.proteinEnrichmentProfilesByStudyId.result,
                         molecularProfiles => molecularProfiles[0]
                     )
                 );
@@ -697,19 +725,26 @@ export default abstract class ComparisonStore {
         },
     });
 
-    readonly selectedMethylationEnrichmentProfileMap = remoteData({
+    readonly methylationEnrichmentProfilesByStudyId = remoteData({
         await: () => [this.methylationEnrichmentProfiles],
+        invoke: () =>
+            Promise.resolve(
+                _.groupBy(
+                    this.methylationEnrichmentProfiles.result,
+                    profile => profile.studyId
+                )
+            ),
+    });
+
+    readonly selectedMethylationEnrichmentProfileMap = remoteData({
+        await: () => [this.methylationEnrichmentProfilesByStudyId],
         invoke: () => {
             // set default enrichmentProfileMap if not selected yet
             if (_.isEmpty(this._methylationEnrichmentProfileMap)) {
-                const molecularProfilesbyStudyId = _.groupBy(
-                    this.methylationEnrichmentProfiles.result!,
-                    profile => profile.studyId
-                );
                 // Select only one molecular profile for each study
                 return Promise.resolve(
                     _.mapValues(
-                        molecularProfilesbyStudyId,
+                        this.methylationEnrichmentProfilesByStudyId.result,
                         molecularProfiles => molecularProfiles[0]
                     )
                 );
